@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useLoginUserMutation } from "@/services/controllers/authController"
 
 interface ValidationErrors {
   email?: string
@@ -18,12 +20,14 @@ interface ValidationErrors {
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
+  
+  const [loginUser, { isLoading }] = useLoginUserMutation()
+  const router = useRouter()
 
   const validateEmail = (email: string): string | undefined => {
     if (!email) return "Email is required"
@@ -57,18 +61,45 @@ export default function LoginPage() {
 
     if (!validateForm()) return
 
-    setIsLoading(true)
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const result = await loginUser({
+        email: formData.email,
+        password: formData.password,
+      }).unwrap()
 
-      console.log("Login:", formData)
-      // Login success - redirect would happen here
-    } catch (error) {
-      setErrors({ general: "Invalid email or password. Please try again." })
-    } finally {
-      setIsLoading(false)
+      // Handle successful login
+      console.log("Login successful:", result)
+      
+      // Store user data/token if needed
+      // localStorage.setItem('token', result.token) // if your API returns a token
+      // localStorage.setItem('user', JSON.stringify(result.user)) // if your API returns user data
+      
+      // Redirect based on user type
+      const userType = result.user?.type || result.user.type || result.success // Handle different possible response structures
+      
+      if (userType === 'Student') {
+        router.push("/student/dashboard")
+      } else if (userType === 'Young-Adult') {
+        router.push("/young-adult/dashboard")
+      } else {
+        // Fallback redirect if user type is not recognized
+        console.warn("Unknown user type:", userType)
+        router.push("/dashboard")
+      }
+      
+    } catch (error: any) {
+      console.error("Login error:", error)
+      
+      // Handle different types of errors
+      if (error?.status === 401) {
+        setErrors({ general: "Invalid email or password. Please try again." })
+      } else if (error?.status === 400) {
+        setErrors({ general: "Please check your email and password." })
+      } else if (error?.data?.message) {
+        setErrors({ general: error.data.message })
+      } else {
+        setErrors({ general: "An error occurred. Please try again later." })
+      }
     }
   }
 
@@ -81,7 +112,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4  w-full">
+    <div className="min-h-screen flex items-center justify-center p-4 w-full">
       <Card className="w-full max-w-md shadow-xl border-0 bg-white/90 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">

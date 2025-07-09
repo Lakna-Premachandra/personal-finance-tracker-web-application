@@ -37,13 +37,22 @@ export interface RegisterRequest {
   age?: number;
   phoneNo?: string;
   type: 'Young-Adult' | 'Student';
-  // Student specific
   guardianContactNo?: string;
-  // Young Adult specific
   employmentStatus?: string;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+}
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    type: 'Young-Adult' | 'Student';
+  };
 }
