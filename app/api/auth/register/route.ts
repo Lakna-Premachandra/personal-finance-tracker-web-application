@@ -1,8 +1,17 @@
-import { NextRequest } from 'next/server';
-import { AuthController } from '@/lib/controllers/authController';
+import { NextRequest, NextResponse  } from 'next/server';
+import { AuthService } from '@/lib/services/authService';
 
-const authController = new AuthController();
+const authService = new AuthService();
 
 export async function POST(request: NextRequest) {
-  return authController.register(request);
+  try {
+    const body = await request.json();
+    const result = await authService.register(body);
+    return NextResponse.json(result, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message || 'Registration failed' },
+      { status: 500 }
+    );
+  }
 }

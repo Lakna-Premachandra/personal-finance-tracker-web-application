@@ -1,4 +1,4 @@
-import { LoginRequest, LoginResponse, RegisterRequest } from "@/lib/types/user.types"
+import { LoginRequest, LoginResponse, RegisterRequest } from "@/types/user.types"
 import { api } from "../baseApi"
 
 const controller = 'auth'
