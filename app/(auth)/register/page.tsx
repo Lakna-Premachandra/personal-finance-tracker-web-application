@@ -1,15 +1,15 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, Mail, Lock, Calendar, Phone, MapPin, ArrowRight, AlertCircle, CheckCircle, UserRound } from "lucide-react"
-import { useRegisterUserMutation } from "@/services/controllers/authController"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useRegisterUserMutation } from "@/services/controllers/authController"
+import { AlertCircle, ArrowRight, Calendar, CheckCircle, Eye, EyeOff, Lock, Mail, MapPin, Phone, UserRound } from "lucide-react"
+import Link from "next/link"
+import type React from "react"
+import { useState } from "react"
 
 interface ValidationErrors {
   employmentStatus?: string
@@ -37,6 +37,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
+  const [showSuccess, setShowSuccess] = useState(false)
   const [formData, setFormData] = useState({
     employmentStatus: "",
     guardianContactNo: "",
@@ -170,15 +171,34 @@ export default function RegisterPage() {
       console.log("Sending registration payload:", payload)
 
       // Make API call
+      setShowSuccess(true)
       const response = await registerUser(payload).unwrap()
 
-      // Handle success - you might want to redirect or show success message
-      // For example:
-      // router.push('/login?message=Registration successful')
-      // or show a success toast
+
+      // Clear form data after successful registration
+      setFormData({
+        employmentStatus: "",
+        guardianContactNo: "",
+        username: "",
+        email: "",
+        dateOfBirth: "",
+        password: "",
+        confirmPassword: "",
+        phoneNo: "",
+        address: "",
+      })
+
+      // Optional: Redirect to login page after a short delay
+      // setTimeout(() => {
+      //   router.push('/login')
+      // }, 2000)
+      setTimeout(() => {
+        setShowSuccess(false)
+      }, 5000)
+
 
     } catch (error: any) {
-      console.error("Registration failed:", error)
+      setShowSuccess(false)
 
       // Handle different types of errors
       if (error?.data?.message) {
@@ -234,6 +254,15 @@ export default function RegisterPage() {
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
               <span>{errors.general}</span>
+            </div>
+          )}
+          {showSuccess && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700">
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Registration Successful!</p>
+                <p className="text-sm">Your account has been created successfully. You can now sign in.</p>
+              </div>
             </div>
           )}
 
@@ -498,20 +527,18 @@ export default function RegisterPage() {
                   )}
                 </div>
               ) : (
-
                 <div className="space-y-2">
                   <Label htmlFor="employmentStatus" className="text-sm font-medium">
                     Employment status (Optional)
                   </Label>
                   <div className="relative">
-                    <UserRound className="absolute left-3 top-3 h-4 w-4 text-secondary-400 z-10 top-[10px]" />
+                    <UserRound className="absolute left-3 top-[10px] h-4 w-4 text-secondary-400 z-10" />
                     <Select
                       value={formData.employmentStatus}
                       onValueChange={(value) => handleInputChange("employmentStatus", value)}
                       disabled={registerLoading}
                     >
                       <SelectTrigger
-
                         id="employmentStatus"
                         className={`pl-10 h-11 border-secondary-200 focus:border-primary focus:ring-primary ${errors.employmentStatus ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
                           }`}
@@ -534,12 +561,7 @@ export default function RegisterPage() {
                     </p>
                   )}
                 </div>
-
               )}
-
-
-
-
             </div>
 
             {/* Password Requirements */}
@@ -621,6 +643,8 @@ export default function RegisterPage() {
           </form>
         </CardContent>
       </Card>
+
+
     </div>
   )
 }
