@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLoginUserMutation } from "@/services/controllers/authController"
+import { useDispatch } from "react-redux"
+import { loginSuccess } from "@/store/slices/authSlice"
 
 interface ValidationErrors {
   email?: string
@@ -20,6 +22,7 @@ interface ValidationErrors {
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
+  const dispatch = useDispatch()
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [formData, setFormData] = useState({
     email: "",
@@ -66,6 +69,10 @@ export default function LoginPage() {
         email: formData.email,
         password: formData.password,
       }).unwrap()
+       dispatch(loginSuccess({
+        token: result.token!,
+        user: result.user
+      }))
 
       // Handle successful login
       console.log("Login successful:", result)
