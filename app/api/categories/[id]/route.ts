@@ -1,28 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CategoryService } from '@/lib/services/categoryService';
-import jwt from 'jsonwebtoken';
-
-interface JWTPayload {
-  userId: number;
-  username: string;
-  type: string;
-}
-
-function verifyToken(request: NextRequest): JWTPayload | null {
-  try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
-    return decoded;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-}
+import { verifyToken } from '@/lib/utils/auth';
 
 // PUT: Update category
 export async function PUT(
@@ -128,5 +106,33 @@ export async function DELETE(
       { error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = verifyToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const categoryId = parseInt(params.id);
+    if (isNaN(categoryId)) {
+      return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 });
+    }
+
+    const category = await CategoryService.getCategoryById(categoryId, user.userId);
+
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found or access denied' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: category });
+  } catch (error) {
+    console.error('Error in GET /api/categories/[id]:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

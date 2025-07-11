@@ -122,4 +122,30 @@ export class CategoryService {
       throw new Error('Failed to delete category');
     }
   }
+
+  static async getCategoryById(categoryId: number, userId: number): Promise<Category | null> {
+    try {
+      const pool = await connectToDatabase();
+      const result = await pool.request()
+        .input('CategoryID', sql.Int, categoryId)
+        .input('UserID', sql.Int, userId)
+        .execute('GetCategoryById');
+  
+      const row = result.recordset[0];
+      if (!row) return null;
+  
+      return {
+        Category_ID: row.Category_ID,
+        User_ID: row.User_ID,
+        Name: row.Name,
+        Type: row.Type,
+        Is_Default: row.Is_Default,
+        Created_Date: row.Created_Date,
+        Updated_Date: row.Updated_Date
+      };
+    } catch (error) {
+      console.error('Error getting category by ID:', error);
+      throw new Error('Failed to fetch category');
+    }
+  }  
 }
