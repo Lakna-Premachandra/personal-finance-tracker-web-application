@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CategoryService } from '@/lib/services/categoryService';
+import { TransactionService } from '@/lib/services/transactionService';
 import { verifyToken } from '@/lib/utils/auth';
 
-// GET: Get all categories or by type
+// GET: Get all transactions or by type
 export async function GET(request: NextRequest) {
   try {
     const user = verifyToken(request);
@@ -16,20 +16,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as 'Income' | 'Expense' | null;
 
-    let categories;
-    if (type) {
-      categories = await CategoryService.getCategoriesByType(user.userId, type);
-    } else {
-      categories = await CategoryService.getAllCategories(user.userId);
-    }
+    const transactions = await TransactionService.getAllTransactions(user.userId, type || undefined);
 
     return NextResponse.json({
       success: true,
-      data: categories
+      data: transactions
     });
 
   } catch (error) {
-    console.error('Error in GET /api/categories:', error);
+    console.error('Error in GET /api/transactions:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -37,7 +32,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Add new category
+// POST: Add new transaction
 export async function POST(request: NextRequest) {
   try {
     const user = verifyToken(request);
@@ -49,12 +44,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, type } = body;
+    const { title, description, amount, categoryId, type } = body;
 
     // Validate input
-    if (!name || !type) {
+    if (!title || !amount || !categoryId || !type) {
       return NextResponse.json(
-        { error: 'Name and type are required' },
+        { error: 'Title, amount, categoryId, and type are required' },
         { status: 400 }
       );
     }
@@ -66,7 +61,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await CategoryService.addCategory(user.userId, name, type);
+    if (amount <= 0) {
+      return NextResponse.json(
+        { error: 'Amount must be greater than 0' },
+        { status: 400 }
+      );
+    }
+
+    const transactionInput = {
+      title,
+      description: description || '',
+      amount: parseFloat(amount),
+      categoryId: parseInt(categoryId)
+    };
+
+    const result = await TransactionService.addTransaction(user.userId, type, transactionInput);
 
     if (result.Status === 'ERROR') {
       return NextResponse.json(
@@ -78,11 +87,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: result.Message,
-      data: { categoryId: result.Category_ID }
+      data: { transactionId: result.Transaction_ID }
     });
 
   } catch (error) {
-    console.error('Error in POST /api/categories:', error);
+    console.error('Error in POST /api/transactions:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
