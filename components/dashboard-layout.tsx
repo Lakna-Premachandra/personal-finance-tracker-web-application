@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useDispatch } from "react-redux"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -16,6 +18,7 @@ import {
 import { SidebarNav } from "@/components/sidebar-nav"
 import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { logout } from "@/store/slices/authSlice"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -25,6 +28,16 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, userType, userName = "John Doe" }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const dispatch = useDispatch()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    // Dispatch logout action to clear Redux state and localStorage
+    dispatch(logout())
+    
+    // Redirect to login page
+    router.push('/login') // or wherever your login page is
+  }
 
   return (
     <div className="min-h-screen bg-secondary-50">
@@ -57,7 +70,6 @@ export function DashboardLayout({ children, userType, userName = "John Doe" }: D
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
-
 
             <div className="flex justify-end items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
@@ -96,7 +108,7 @@ export function DashboardLayout({ children, userType, userName = "John Doe" }: D
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
