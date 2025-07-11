@@ -1,8 +1,25 @@
-// services/api.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+
+// Create a base query that includes the token
+const baseQueryWithAuth = fetchBaseQuery({
+  baseUrl: 'http://localhost:3000/api',
+  prepareHeaders: (headers, { getState }) => {
+    // Get token from localStorage or Redux state
+    const token = localStorage.getItem('token')
+    // Alternative: get from Redux state
+    // const token = (getState() as RootState).auth.token
+    
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    
+    return headers
+  },
+})
 
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000/api' }),
-  endpoints: () => ({}), // Empty base; endpoints will be injected
+  baseQuery: baseQueryWithAuth,
+  tagTypes: ['User', 'Transaction', 'Budget'], // Add more as needed
+  endpoints: () => ({}),
 })
