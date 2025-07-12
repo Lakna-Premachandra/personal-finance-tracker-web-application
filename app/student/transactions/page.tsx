@@ -1,5 +1,5 @@
 "use client"
-
+//this is student 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,10 +21,23 @@ import { TransactionList } from "@/components/transaction-list"
 import { ExportDialog } from "@/components/export-dialog"
 import { Plus, CalendarIcon, ArrowUpRight, ArrowDownRight, CalendarIcon as CalendarViewIcon, List } from "lucide-react"
 import { format } from "date-fns"
+import { useGetCategoriesByTypeAndUserTypeQuery } from "@/services/controllers/categoryController"
 
 export default function TransactionsPage() {
   const [date, setDate] = useState<Date>()
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list")
+  const [selectedTransactionType, setSelectedTransactionType] = useState<"Income" | "Expense" | "">("")
+
+  // Get categories based on selected transaction type and user type (Student)
+  const { data: categoriesData, isLoading: isCategoriesLoading } = useGetCategoriesByTypeAndUserTypeQuery(
+    { 
+      type: selectedTransactionType as "Income" | "Expense", 
+      userType: "Student" 
+    },
+    {
+      skip: !selectedTransactionType, // Skip query if no type selected
+    }
+  )
 
   const transactions = [
     {
@@ -140,6 +153,17 @@ export default function TransactionsPage() {
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
   const totalExpenses = Math.abs(transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0))
 
+  // Get available categories (only default categories for students)
+  const getAvailableCategories = () => {
+    if (!categoriesData?.data) return []
+    // All categories returned for students are default categories (Is_Default: true)
+    return categoriesData.data
+  }
+
+  const handleTransactionTypeChange = (type: string) => {
+    setSelectedTransactionType(type as "Income" | "Expense")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -188,13 +212,13 @@ export default function TransactionsPage() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="type">Transaction Type</Label>
-                  <Select>
+                  <Select onValueChange={handleTransactionTypeChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
+                      <SelectItem value="Income">Income</SelectItem>
+                      <SelectItem value="Expense">Expense</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -212,20 +236,29 @@ export default function TransactionsPage() {
                 </div>
                 <div>
                   <Label htmlFor="category">Category</Label>
-                  <Select>
+                  <Select disabled={!selectedTransactionType}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue 
+                        placeholder={
+                          !selectedTransactionType 
+                            ? "Select transaction type first" 
+                            : isCategoriesLoading 
+                              ? "Loading categories..." 
+                              : "Select category"
+                        } 
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="food">Food</SelectItem>
-                      <SelectItem value="entertainment">Entertainment</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="transportation">Transportation</SelectItem>
-                      <SelectItem value="allowance">Allowance</SelectItem>
-                      <SelectItem value="work">Work</SelectItem>
+                      {getAvailableCategories().map((category) => (
+                        <SelectItem key={category.Category_ID} value={category.Name.toLowerCase()}>
+                          {category.Name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-1">Categories are pre-defined for student accounts</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Categories are pre-defined for student accounts
+                  </p>
                 </div>
                 <div>
                   <Label>Date</Label>
