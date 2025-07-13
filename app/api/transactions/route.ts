@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, amount, categoryId, type } = body;
+    const { title, description, amount, categoryId, type, transactionDate  } = body;
 
     // Validate input
     if (!title || !amount || !categoryId || !type) {
@@ -68,11 +68,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate transaction date if provided
+    if (transactionDate) {
+      const parsedDate = new Date(transactionDate);
+      if (isNaN(parsedDate.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid transaction date format' },
+          { status: 400 }
+        );
+      }
+      
+      // Check if transaction date is not in the future
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (parsedDate > today) {
+        return NextResponse.json(
+          { error: 'Transaction date cannot be in the future' },
+          { status: 400 }
+        );
+      }
+    }
+
     const transactionInput = {
       title,
       description: description || '',
       amount: parseFloat(amount),
-      categoryId: parseInt(categoryId)
+      categoryId: parseInt(categoryId),
+      transactionDate: transactionDate || undefined
     };
 
     const result = await TransactionService.addTransaction(user.userId, type, transactionInput);

@@ -9,6 +9,7 @@ export interface Transaction {
   Category_ID: number;
   Category_Name: string;
   Type: 'Income' | 'Expense';
+  Transaction_Date: Date;
   Created_Date: Date;
 }
 
@@ -17,6 +18,7 @@ export interface TransactionInput {
   description: string;
   amount: number;
   categoryId: number;
+  transactionDate?: Date | string;
 }
 
 export interface TransactionResponse {
@@ -26,6 +28,18 @@ export interface TransactionResponse {
 }
 
 export class TransactionService {
+  // Helper method to parse transaction date
+  private static parseTransactionDate(dateInput?: Date | string): Date | null {
+    if (!dateInput) return null;
+    
+    if (typeof dateInput === 'string') {
+      const parsedDate = new Date(dateInput);
+      return isNaN(parsedDate.getTime()) ? null : parsedDate;
+    }
+    
+    return dateInput instanceof Date ? dateInput : null;
+  }
+
   // Get all transactions (Income + Expense)
   static async getAllTransactions(userId: number, type?: 'Income' | 'Expense'): Promise<Transaction[]> {
     try {
@@ -44,6 +58,7 @@ export class TransactionService {
         Category_ID: row.Category_ID,
         Category_Name: row.Category_Name,
         Type: row.Type,
+        Transaction_Date: row.Transaction_Date,
         Created_Date: row.Created_Date
       }));
     } catch (error) {
@@ -76,6 +91,7 @@ export class TransactionService {
         Category_ID: row.Category_ID,
         Category_Name: row.Category_Name,
         Type: row.Type,
+        Transaction_Date: row.Transaction_Date,
         Created_Date: row.Created_Date
       };
     } catch (error) {
@@ -88,13 +104,20 @@ export class TransactionService {
   static async addIncomeTransaction(userId: number, transaction: TransactionInput): Promise<TransactionResponse> {
     try {
       const pool = await connectToDatabase();
-      const result = await pool.request()
+      const request = pool.request()
         .input('UserID', sql.Int, userId)
         .input('Title', sql.VarChar(100), transaction.title)
         .input('Description', sql.VarChar(255), transaction.description)
         .input('Amount', sql.Decimal(12, 2), transaction.amount)
-        .input('CategoryID', sql.Int, transaction.categoryId)
-        .execute('AddIncomeTransaction');
+        .input('CategoryID', sql.Int, transaction.categoryId);
+
+      // Add transaction date if provided
+      const transactionDate = this.parseTransactionDate(transaction.transactionDate);
+      if (transactionDate) {
+        request.input('TransactionDate', sql.Date, transactionDate);
+      }
+
+      const result = await request.execute('AddIncomeTransaction');
       
       const response = result.recordset[0];
       return {
@@ -112,13 +135,20 @@ export class TransactionService {
   static async addExpenseTransaction(userId: number, transaction: TransactionInput): Promise<TransactionResponse> {
     try {
       const pool = await connectToDatabase();
-      const result = await pool.request()
+      const request = pool.request()
         .input('UserID', sql.Int, userId)
         .input('Title', sql.VarChar(100), transaction.title)
         .input('Description', sql.VarChar(255), transaction.description)
         .input('Amount', sql.Decimal(12, 2), transaction.amount)
-        .input('CategoryID', sql.Int, transaction.categoryId)
-        .execute('AddExpenseTransaction');
+        .input('CategoryID', sql.Int, transaction.categoryId);
+
+      // Add transaction date if provided
+      const transactionDate = this.parseTransactionDate(transaction.transactionDate);
+      if (transactionDate) {
+        request.input('TransactionDate', sql.Date, transactionDate);
+      }
+
+      const result = await request.execute('AddExpenseTransaction');
       
       const response = result.recordset[0];
       return {
@@ -136,14 +166,21 @@ export class TransactionService {
   static async updateIncomeTransaction(transactionId: number, userId: number, transaction: TransactionInput): Promise<TransactionResponse> {
     try {
       const pool = await connectToDatabase();
-      const result = await pool.request()
+      const request = pool.request()
         .input('TransactionID', sql.Int, transactionId)
         .input('UserID', sql.Int, userId)
         .input('Title', sql.VarChar(100), transaction.title)
         .input('Description', sql.VarChar(255), transaction.description)
         .input('Amount', sql.Decimal(12, 2), transaction.amount)
-        .input('CategoryID', sql.Int, transaction.categoryId)
-        .execute('UpdateIncomeTransaction');
+        .input('CategoryID', sql.Int, transaction.categoryId);
+
+      // Add transaction date if provided
+      const transactionDate = this.parseTransactionDate(transaction.transactionDate);
+      if (transactionDate) {
+        request.input('TransactionDate', sql.Date, transactionDate);
+      }
+
+      const result = await request.execute('UpdateIncomeTransaction');
       
       const response = result.recordset[0];
       return {
@@ -160,14 +197,21 @@ export class TransactionService {
   static async updateExpenseTransaction(transactionId: number, userId: number, transaction: TransactionInput): Promise<TransactionResponse> {
     try {
       const pool = await connectToDatabase();
-      const result = await pool.request()
+      const request = pool.request()
         .input('TransactionID', sql.Int, transactionId)
         .input('UserID', sql.Int, userId)
         .input('Title', sql.VarChar(100), transaction.title)
         .input('Description', sql.VarChar(255), transaction.description)
         .input('Amount', sql.Decimal(12, 2), transaction.amount)
-        .input('CategoryID', sql.Int, transaction.categoryId)
-        .execute('UpdateExpenseTransaction');
+        .input('CategoryID', sql.Int, transaction.categoryId);
+
+      // Add transaction date if provided
+      const transactionDate = this.parseTransactionDate(transaction.transactionDate);
+      if (transactionDate) {
+        request.input('TransactionDate', sql.Date, transactionDate);
+      }
+
+      const result = await request.execute('UpdateExpenseTransaction');
       
       const response = result.recordset[0];
       return {
@@ -180,7 +224,7 @@ export class TransactionService {
     }
   }
 
-  // Delete income transaction
+  // Delete income transaction (no changes needed)
   static async deleteIncomeTransaction(transactionId: number, userId: number): Promise<TransactionResponse> {
     try {
       const pool = await connectToDatabase();
@@ -200,7 +244,7 @@ export class TransactionService {
     }
   }
 
-  // Delete expense transaction
+  // Delete expense transaction (no changes needed)
   static async deleteExpenseTransaction(transactionId: number, userId: number): Promise<TransactionResponse> {
     try {
       const pool = await connectToDatabase();
