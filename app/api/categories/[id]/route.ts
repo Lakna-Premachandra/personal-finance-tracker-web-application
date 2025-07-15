@@ -64,7 +64,7 @@ export async function PUT(
   }
 }
 
-// DELETE: Delete category
+// DELETE: Delete category with transaction reassignment
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -86,6 +86,15 @@ export async function DELETE(
       );
     }
 
+    // Get transaction count before deletion for better user feedback
+    let transactionCount = { incomeCount: 0, expenseCount: 0 };
+    try {
+      transactionCount = await CategoryService.getCategoryTransactionCount(categoryId, user.userId);
+    } catch (error) {
+      // If can't get transaction count, proceed with deletion anyway
+      console.warn('Could not get transaction count:', error);
+    }
+
     const result = await CategoryService.deleteCategory(categoryId, user.userId);
 
     if (result.Status === 'ERROR') {
@@ -95,10 +104,18 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({
+    const response: any = {
       success: true,
       message: result.Message
-    });
+    };
+
+    // Add transaction information if transactions were reassigned
+    if (result.TransactionsReassigned && result.TransactionsReassigned > 0) {
+      response.transactionsReassigned = result.TransactionsReassigned;
+      response.details = `${result.TransactionsReassigned} transaction(s) were automatically moved to the default category`;
+    }
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('Error in DELETE /api/categories/[id]:', error);
@@ -109,6 +126,7 @@ export async function DELETE(
   }
 }
 
+// GET: Get category by ID
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -130,7 +148,21 @@ export async function GET(
       return NextResponse.json({ error: 'Category not found or access denied' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: category });
+    // Include transaction count in the response
+    let transactionCount = { incomeCount: 0, expenseCount: 0 };
+    try {
+      transactionCount = await CategoryService.getCategoryTransactionCount(categoryId, user.userId);
+    } catch (error) {
+      console.warn('Could not get transaction count:', error);
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      data: {
+        ...category,
+        transactionCount
+      }
+    });
   } catch (error) {
     console.error('Error in GET /api/categories/[id]:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

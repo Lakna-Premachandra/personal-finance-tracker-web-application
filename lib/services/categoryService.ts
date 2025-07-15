@@ -16,6 +16,10 @@ export interface CategoryResponse {
   Category_ID?: number;
 }
 
+export interface DeleteCategoryResponse extends CategoryResponse {
+  TransactionsReassigned?: number;
+}
+
 export class CategoryService {
   static async getAllCategories(userId: number): Promise<Category[]> {
     try {
@@ -104,7 +108,7 @@ export class CategoryService {
     }
   }
 
-  static async deleteCategory(categoryId: number, userId: number): Promise<CategoryResponse> {
+  static async deleteCategory(categoryId: number, userId: number): Promise<DeleteCategoryResponse> {
     try {
       const pool = await connectToDatabase();
       const result = await pool.request()
@@ -113,9 +117,20 @@ export class CategoryService {
         .execute('DeleteCategory');
       
       const response = result.recordset[0];
+      
+      // Parse the message to extract transaction count if present
+      let transactionsReassigned = 0;
+      if (response.Status === 'SUCCESS' && response.Message.includes('transaction(s) reassigned')) {
+        const match = response.Message.match(/(\d+) transaction\(s\) reassigned/);
+        if (match) {
+          transactionsReassigned = parseInt(match[1]);
+        }
+      }
+      
       return {
         Status: response.Status,
-        Message: response.Message
+        Message: response.Message,
+        TransactionsReassigned: transactionsReassigned
       };
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -147,5 +162,43 @@ export class CategoryService {
       console.error('Error getting category by ID:', error);
       throw new Error('Failed to fetch category');
     }
-  }  
+  }
+
+  // Helper method to check if a category has transactions
+  static async getCategoryTransactionCount(categoryId: number, userId: number): Promise<{incomeCount: number, expenseCount: number}> {
+    try {
+      const pool = await connectToDatabase();
+      
+      // Get category type first
+      const categoryResult = await pool.request()
+        .input('CategoryID', sql.Int, categoryId)
+        .input('UserID', sql.Int, userId)
+        .execute('GetCategoryById');
+      
+      const category = categoryResult.recordset[0];
+      if (!category) {
+        throw new Error('Category not found');
+      }
+      
+      let incomeCount = 0;
+      let expenseCount = 0;
+      
+      if (category.Type === 'Income') {
+        const incomeResult = await pool.request()
+          .input('CategoryID', sql.Int, categoryId)
+          .query('SELECT COUNT(*) as Count FROM Income WHERE Category_ID = @CategoryID');
+        incomeCount = incomeResult.recordset[0].Count;
+      } else if (category.Type === 'Expense') {
+        const expenseResult = await pool.request()
+          .input('CategoryID', sql.Int, categoryId)
+          .query('SELECT COUNT(*) as Count FROM Expense WHERE Category_ID = @CategoryID');
+        expenseCount = expenseResult.recordset[0].Count;
+      }
+      
+      return { incomeCount, expenseCount };
+    } catch (error) {
+      console.error('Error getting category transaction count:', error);
+      throw new Error('Failed to get transaction count');
+    }
+  }
 }
