@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -19,24 +19,52 @@ import { SidebarNav } from "@/components/sidebar-nav"
 import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { logout } from "@/store/slices/authSlice"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
+import Link from "next/link"
+import Router from "next/router"
+
+// Add RootState type
+interface RootState {
+  auth: {
+    token: string | null
+    user: {
+      id: number
+      username: string
+      email: string
+      type: 'Young-Adult' | 'Student'
+    } | null
+    isAuthenticated: boolean
+  }
+}
 
 interface DashboardLayoutProps {
   children: React.ReactNode
   userType: "student" | "young-adult"
-  userName?: string
+  userName?: string // This is now optional since we'll get it from Redux
 }
 
-export function DashboardLayout({ children, userType, userName = "John Doe" }: DashboardLayoutProps) {
+export function DashboardLayout({ children, userType, userName }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [openConfirmation, setOpenConfirmation] = useState(false)
   const dispatch = useDispatch()
   const router = useRouter()
+
+  // Get user data from Redux store
+  const user = useSelector((state: RootState) => state.auth.user)
+
+  // Use username from Redux store, fallback to prop, then to default
+  const displayName = user?.username || userName || ''
 
   const handleLogout = () => {
     // Dispatch logout action to clear Redux state and localStorage
     dispatch(logout())
-    
+
     // Redirect to login page
     router.push('/login') // or wherever your login page is
+  }
+
+  const handleConfirmation = () => {
+    setOpenConfirmation(true)
   }
 
   return (
@@ -63,10 +91,10 @@ export function DashboardLayout({ children, userType, userName = "John Doe" }: D
       </div>
 
       {/* Main Content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 ">
         {/* Header */}
         <header className="sticky top-0 z-40 bg-white border-b">
-          <div className="flex h-16 items-center gap-4 px-6">
+          <div className="flex h-16 items-center gap-4 px-6  justify-end">
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
@@ -81,34 +109,35 @@ export function DashboardLayout({ children, userType, userName = "John Doe" }: D
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userName} />
-                      <AvatarFallback>
-                        {userName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-gray-100">
+                    <Avatar className="h-10 w-10 border-2 border-gray-300 flex bg-primary text-white  items-center justify-center">
+                      <div>
+                        {displayName && displayName.length > 0
+                          ? displayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+                          : "U"}
+                      </div>
+
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{userName}</p>
+                      <p className="text-sm font-medium leading-none">{displayName}</p>
                       <p className="text-xs leading-none text-muted-foreground capitalize">
                         {userType.replace("-", " ")}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem >
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <Link href={'/young-adult/settings'} className="text-sm font-medium">
+                      Settings
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
+                  <DropdownMenuItem onClick={handleConfirmation}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -118,6 +147,30 @@ export function DashboardLayout({ children, userType, userName = "John Doe" }: D
           </div>
         </header>
 
+        <Dialog open={openConfirmation} onOpenChange={setOpenConfirmation}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Logout</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to log out?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end space-x-2">
+              <Button
+                onClick={() => {
+                  handleLogout()
+                  setOpenConfirmation(false)
+                }}
+              >
+                Confirm
+              </Button>
+              <Button
+                variant="outline" onClick={() => setOpenConfirmation(false)}>
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         {/* Page Content */}
         <main className="p-6">{children}</main>
       </div>

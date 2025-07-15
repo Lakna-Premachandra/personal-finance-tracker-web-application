@@ -6,24 +6,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpRight, ArrowDownRight, Search, Filter, Edit, Trash2, Calendar } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, Search, Filter, Edit, Trash2, Calendar, Edit2 } from "lucide-react"
+import { Transaction } from "@/services/controllers/transactionController"
 
-interface Transaction {
-  id: number
-  type: "income" | "expense"
-  description: string
-  amount: number
-  category: string
-  date: string
-  time: string
-}
+// Mock Transaction interface - replace with your actual interface
+
 
 interface TransactionListProps {
   transactions: Transaction[]
   userType: "student" | "young-adult"
+  onEditTransaction?: (transaction: Transaction) => void
+  onDeleteTransaction?: (transaction: Transaction) => void
 }
 
-export function TransactionList({ transactions, userType }: TransactionListProps) {
+export function TransactionList({ transactions, userType, onEditTransaction, onDeleteTransaction }: TransactionListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterCategory, setFilterCategory] = useState("all")
@@ -37,22 +33,23 @@ export function TransactionList({ transactions, userType }: TransactionListProps
   const filteredAndSortedTransactions = transactions
     .filter((transaction) => {
       const matchesSearch =
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesType = filterType === "all" || transaction.type === filterType
-      const matchesCategory = filterCategory === "all" || transaction.category === filterCategory
+        transaction.Description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.Category_Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.Title.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesType = filterType === "all" || transaction.Type === filterType
+      const matchesCategory = filterCategory === "all" || transaction.Category_Name === filterCategory
       return matchesSearch && matchesType && matchesCategory
     })
     .sort((a, b) => {
       switch (sortBy) {
         case "date-desc":
-          return new Date(b.date + " " + b.time).getTime() - new Date(a.date + " " + a.time).getTime()
+          return new Date(b.Transaction_Date).getTime() - new Date(a.Transaction_Date).getTime()
         case "date-asc":
-          return new Date(a.date + " " + a.time).getTime() - new Date(b.date + " " + b.time).getTime()
+          return new Date(a.Transaction_Date).getTime() - new Date(b.Transaction_Date).getTime()
         case "amount-desc":
-          return Math.abs(b.amount) - Math.abs(a.amount)
+          return Math.abs(b.Amount) - Math.abs(a.Amount)
         case "amount-asc":
-          return Math.abs(a.amount) - Math.abs(b.amount)
+          return Math.abs(a.Amount) - Math.abs(b.Amount)
         default:
           return 0
       }
@@ -61,7 +58,8 @@ export function TransactionList({ transactions, userType }: TransactionListProps
   const groupTransactionsByMonth = (transactions: Transaction[]) => {
     const grouped: { [key: string]: Transaction[] } = {}
     transactions.forEach((transaction) => {
-      const date = new Date(transaction.date)
+      // Parse the date correctly (assuming format is YYYY-MM-DD)
+      const date = new Date(transaction.Transaction_Date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
       if (!grouped[monthKey]) {
         grouped[monthKey] = []
@@ -73,26 +71,21 @@ export function TransactionList({ transactions, userType }: TransactionListProps
 
   const groupedTransactions = groupTransactionsByMonth(filteredAndSortedTransactions)
 
-  const formatMonthYear = (monthKey: string) => {
-    const [year, month] = monthKey.split("-")
-    const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1)
-    const currentYear = new Date().getFullYear()
+const formatMonthYear = (monthKey: string) => {
+  const [year, month] = monthKey.split("-")
+  const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1)
+  const currentYear = new Date().getFullYear()
 
-    if (Number.parseInt(year) === currentYear) {
-      return date.toLocaleDateString("en-US", {
-        month: "long",
-      })
-    } else {
-      return date.toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-    }
-  }
+  // Option 1: Always show year
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  })
+}
 
   const getMonthlyTotals = (transactions: Transaction[]) => {
-    const income = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-    const expenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + Math.abs(t.amount), 0)
+    const income = transactions.filter((t) => t.Type === "Income").reduce((sum, t) => sum + t.Amount, 0)
+    const expenses = transactions.filter((t) => t.Type === "Expense").reduce((sum, t) => sum + Math.abs(t.Amount), 0)
     return { income, expenses, balance: income - expenses, transactionCount: transactions.length }
   }
 
@@ -100,15 +93,19 @@ export function TransactionList({ transactions, userType }: TransactionListProps
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
       weekday: "short",
+      month: "short",
       day: "numeric",
     })
   }
 
+  // Get unique categories from transactions for filter
+  const uniqueCategories = [...new Set(transactions.map(t => t.Category_Name))].sort()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
+        <CardTitle className="flex items-center gap-2 mb-2">
+          <Calendar className="h-5 w-5 text-blue-600 " />
           Monthly Transaction History
         </CardTitle>
 
@@ -131,12 +128,12 @@ export function TransactionList({ transactions, userType }: TransactionListProps
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="income">Income Only</SelectItem>
-              <SelectItem value="expense">Expenses Only</SelectItem>
+              <SelectItem value="Income">Income Only</SelectItem>
+              <SelectItem value="Expense">Expenses Only</SelectItem>
             </SelectContent>
           </Select>
 
-        
+          
         </div>
       </CardHeader>
 
@@ -150,15 +147,15 @@ export function TransactionList({ transactions, userType }: TransactionListProps
             </div>
           ) : (
             Object.entries(groupedTransactions)
-              .sort(([a], [b]) => b.localeCompare(a)) // Sort months in descending order
-              .map(([monthKey, monthTransactions]) => {
+              .sort(([a], [b]) => b.localeCompare(a)) // Sort months in descending order (latest first)
+              .map(([monthKey, monthTransactions ]) => {
                 const { income, expenses, balance, transactionCount } = getMonthlyTotals(monthTransactions)
 
                 return (
                   <div key={monthKey} className="space-y-4">
                     {/* Month Header with Monthly Summary */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
-                      <div className="flex items-center justify-between mb-4">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
+                      <div className="flex items-center justify-between mb-4 ">
                         <div>
                           <h3 className="text-xl font-bold text-gray-800">{formatMonthYear(monthKey)}</h3>
                           <p className="text-sm text-gray-600">{transactionCount} transactions</p>
@@ -183,13 +180,12 @@ export function TransactionList({ transactions, userType }: TransactionListProps
                             </div>
                           )}
                           <div
-                            className={`px-4 py-2 rounded-lg font-bold ${
-                              balance > 0
-                                ? "bg-green-100 text-green-700"
-                                : balance < 0
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-gray-100 text-gray-700"
-                            }`}
+                            className={`px-4 py-2 rounded-lg font-bold ${balance > 0
+                              ? "bg-green-100 text-green-700"
+                              : balance < 0
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-700"
+                              }`}
                           >
                             <p className="text-xs font-medium opacity-75">Net Balance</p>
                             <p className="text-lg">
@@ -202,33 +198,36 @@ export function TransactionList({ transactions, userType }: TransactionListProps
 
                     {/* Transactions for this month */}
                     <div className="space-y-3">
-                      {monthTransactions.map((transaction) => (
+                      {monthTransactions
+                        .sort((a, b) => new Date(b.Transaction_Date).getTime() - new Date(a.Transaction_Date).getTime())
+                        .map((transaction) => (
                         <div
-                          key={transaction.id}
+                          key={transaction.Transaction_ID}
                           className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                         >
                           <div className="flex items-center gap-4">
                             <div
-                              className={`p-3 rounded-full ${
-                                transaction.type === "income"
-                                  ? "bg-green-100 text-green-600"
-                                  : "bg-red-100 text-red-600"
-                              }`}
+                              className={`p-3 rounded-full ${transaction.Type === "Income"
+                                ? "bg-green-100 text-green-600"
+                                : "bg-red-100 text-red-600"
+                                }`}
                             >
-                              {transaction.type === "income" ? (
+                              {transaction.Type === "Income" ? (
                                 <ArrowUpRight className="h-5 w-5" />
                               ) : (
                                 <ArrowDownRight className="h-5 w-5" />
                               )}
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-800">{transaction.description}</p>
+                              <p className="font-semibold text-gray-800">{transaction.Title}</p>
+                              <p className="text-sm text-gray-600">{transaction.Description}</p>
                               <div className="flex items-center gap-3 mt-1">
                                 <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                                  {transaction.category}
+                                  {transaction.Category_Name}
                                 </Badge>
-                                <span className="text-sm text-gray-500">
-                                  {formatDate(transaction.date)} • {transaction.time}
+                                <span className="text-sm text-gray-500 flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(transaction.Transaction_Date)} 
                                 </span>
                               </div>
                             </div>
@@ -236,29 +235,35 @@ export function TransactionList({ transactions, userType }: TransactionListProps
 
                           <div className="flex items-center gap-3">
                             <div
-                              className={`text-lg font-bold ${
-                                transaction.type === "income" ? "text-green-600" : "text-red-600"
-                              }`}
+                              className={`text-lg font-bold ${transaction.Type === "Income" ? "text-green-600" : "text-red-600"
+                                }`}
                             >
-                              {transaction.type === "income" ? "+" : ""}LKR{" "}
-                              {Math.abs(transaction.amount).toLocaleString()}
+                              {transaction.Type === "Income" ? "+" : "-"}LKR{" "}
+                              {Math.abs(transaction.Amount).toLocaleString()}
                             </div>
-
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                            <div className="flex items-center gap-2">
+                              {onEditTransaction && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onEditTransaction(transaction)}
+                                  className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600"
+                                  title="Edit transaction"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {onDeleteTransaction && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onDeleteTransaction(transaction)}
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
+                                  title="Delete transaction"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>

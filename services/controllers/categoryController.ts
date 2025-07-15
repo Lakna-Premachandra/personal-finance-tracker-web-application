@@ -79,7 +79,7 @@ export const categoryApi = api.injectEndpoints({
         >({
             query: ({ name, type }) => {
                 // Get the token from localStorage
-                const token = localStorage.getItem('token');
+                const token = sessionStorage.getItem('token');
 
                 return {
                     url: `${controller}`,

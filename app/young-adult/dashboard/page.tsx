@@ -27,7 +27,7 @@ export default function YoungAdultDashboard() {
       title: "Total Balance",
       value: "LKR 345,678",
       change: "+15.2%",
-      changeType: "positive" as const,
+      changeType: "positive" as "positive" | "negative" | "neutral",
       icon: DollarSign,
     },
     {
@@ -48,7 +48,7 @@ export default function YoungAdultDashboard() {
       title: "Savings Goal",
       value: "45%",
       change: "Target: LKR 1,000,000",
-      changeType: "neutral" as const,
+      changeType: "neutral" as "positive" | "negative" | "neutral",
       icon: Target,
     },
   ]
@@ -106,16 +106,7 @@ export default function YoungAdultDashboard() {
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here's your comprehensive financial overview.</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 bg-transparent">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Analytics
-          </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
-          </Button>
-        </div>
+     
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
