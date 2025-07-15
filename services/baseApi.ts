@@ -5,7 +5,7 @@ const baseQueryWithAuth = fetchBaseQuery({
   baseUrl: 'http://localhost:3000/api',
   prepareHeaders: (headers, { getState }) => {
     // Get token from localStorage or Redux state
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     // Alternative: get from Redux state
     // const token = (getState() as RootState).auth.token
     

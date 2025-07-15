@@ -33,21 +33,21 @@ const authSlice = createSlice({
       state.token = action.payload.token
       state.user = action.payload.user
       state.isAuthenticated = true
-      // Also store in localStorage for persistence
-      localStorage.setItem('token', action.payload.token)
-      localStorage.setItem('user', JSON.stringify(action.payload.user))
+      // Use sessionStorage instead of localStorage
+      sessionStorage.setItem('token', action.payload.token)
+      sessionStorage.setItem('user', JSON.stringify(action.payload.user))
     },
     logout: (state) => {
       state.token = null
       state.user = null
       state.isAuthenticated = false
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
     },
     initializeAuth: (state) => {
-      // Check if token exists in localStorage on app initialization
-      const token = localStorage.getItem('token')
-      const user = localStorage.getItem('user')
+      // Check if token exists in sessionStorage on app initialization
+      const token = sessionStorage.getItem('token')
+      const user = sessionStorage.getItem('user')
       
       if (token && user) {
         state.token = token

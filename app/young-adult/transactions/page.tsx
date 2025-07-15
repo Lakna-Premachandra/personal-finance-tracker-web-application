@@ -49,10 +49,11 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { Category, useAddCategoryMutation, useDeleteCategoryMutation, useGetCategoriesByTypeQuery, useUpdateCategoryMutation } from "@/services/controllers/categoryController"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useGetTransactionsQuery, useCreateTransactionMutation, useUpdateTransactionMutation, useDeleteTransactionMutation, Transaction } from "@/services/controllers/transactionController"
 
 export default function YoungAdultTransactionsPage() {
   const [date, setDate] = useState<Date>()
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("list")
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar")
   const [selectedTransactionType, setSelectedTransactionType] = useState<"Income" | "Expense" | "">("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("")
   const [newCategoryName, setNewCategoryName] = useState("")
@@ -61,6 +62,10 @@ export default function YoungAdultTransactionsPage() {
   const [editCategoryName, setEditCategoryName] = useState("")
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -69,6 +74,11 @@ export default function YoungAdultTransactionsPage() {
     amount: "",
   })
 
+  // RTK Query hooks
+  const { data: transactionsData, isLoading: isTransactionsLoading } = useGetTransactionsQuery()
+  const [createTransaction, { isLoading: isCreatingTransaction }] = useCreateTransactionMutation()
+  const [updateTransaction, { isLoading: isUpdatingTransaction }] = useUpdateTransactionMutation()
+  const [deleteTransaction, { isLoading: isDeletingTransaction }] = useDeleteTransactionMutation()
   // RTK Query hooks - Get all categories for the selected type
   const { data: categoriesData, isLoading: isCategoriesLoading } = useGetCategoriesByTypeQuery(
     selectedTransactionType as "Income" | "Expense",
@@ -81,119 +91,11 @@ export default function YoungAdultTransactionsPage() {
   const [updateCategory, { isLoading: isUpdatingCategory }] = useUpdateCategoryMutation()
   const [deleteCategory, { isLoading: isDeletingCategory }] = useDeleteCategoryMutation()
 
-  const transactions = [
-    {
-      id: 1,
-      type: "income" as const,
-      description: "Monthly Salary",
-      amount: 215000,
-      category: "Salary",
-      date: "2024-01-15",
-      time: "09:00 AM",
-    },
-    {
-      id: 2,
-      type: "expense" as const,
-      description: "Rent Payment",
-      amount: -80000,
-      category: "Housing",
-      date: "2024-01-15",
-      time: "10:00 AM",
-    },
-    {
-      id: 3,
-      type: "expense" as const,
-      description: "Grocery Shopping",
-      amount: -12550,
-      category: "Food",
-      date: "2024-01-14",
-      time: "06:30 PM",
-    },
-    {
-      id: 4,
-      type: "expense" as const,
-      description: "Gas Station",
-      amount: -4500,
-      category: "Transportation",
-      date: "2024-01-13",
-      time: "08:15 AM",
-    },
-    {
-      id: 5,
-      type: "expense" as const,
-      description: "Netflix Subscription",
-      amount: -1599,
-      category: "Entertainment",
-      date: "2024-01-12",
-      time: "12:00 PM",
-    },
-    {
-      id: 6,
-      type: "income" as const,
-      description: "Freelance Project",
-      amount: 30000,
-      category: "Freelance",
-      date: "2024-01-10",
-      time: "02:30 PM",
-    },
-    {
-      id: 7,
-      type: "expense" as const,
-      description: "Electric Bill",
-      amount: -8500,
-      category: "Utilities",
-      date: "2024-01-10",
-      time: "11:00 AM",
-    },
-    {
-      id: 8,
-      type: "expense" as const,
-      description: "Coffee Shop",
-      amount: -1250,
-      category: "Food",
-      date: "2024-12-09",
-      time: "08:30 AM",
-    },
-    {
-      id: 9,
-      type: "expense" as const,
-      description: "Car Insurance",
-      amount: -15000,
-      category: "Transportation",
-      date: "2024-12-08",
-      time: "03:00 PM",
-    },
-    {
-      id: 10,
-      type: "income" as const,
-      description: "Investment Dividend",
-      amount: 8500,
-      category: "Investment",
-      date: "2024-12-05",
-      time: "10:00 AM",
-    },
-    {
-      id: 11,
-      type: "expense" as const,
-      description: "Gym Membership",
-      amount: -5000,
-      category: "Healthcare",
-      date: "2024-11-28",
-      time: "07:00 PM",
-    },
-    {
-      id: 12,
-      type: "income" as const,
-      description: "Bonus Payment",
-      amount: 50000,
-      category: "Salary",
-      date: "2024-11-25",
-      time: "02:00 PM",
-    },
-  ]
+  // Use actual transactions from API or fallback to mock data
+  const transactions = transactionsData?.data || []
 
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const totalExpenses = Math.abs(transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0))
+  const totalIncome = transactions.filter((t) => t.Type === "Income").reduce((sum, t) => sum + t.Amount, 0)
+  const totalExpenses = Math.abs(transactions.filter((t) => t.Type === "Expense").reduce((sum, t) => sum + t.Amount, 0))
 
   const handleTransactionTypeChange = (type: string) => {
     setSelectedTransactionType(type as "Income" | "Expense")
@@ -206,6 +108,101 @@ export default function YoungAdultTransactionsPage() {
     setCategoryToDelete(null)
   }
 
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction)
+    setFormData({
+      title: transaction.Title,
+      description: transaction.Description,
+      amount: transaction.Amount.toString(),
+    })
+    setSelectedTransactionType(transaction.Type)
+    setSelectedCategoryId(transaction.Category_ID.toString())
+    setDate(new Date(transaction.Transaction_Date))
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateTransaction = async () => {
+    if (!editingTransaction) return
+
+    // Same validation as handleFormSubmit
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title")
+      return
+    }
+
+    if (!formData.description.trim()) {
+      toast.error("Please enter a description")
+      return
+    }
+
+    if (!formData.amount.trim() || parseFloat(formData.amount) <= 0) {
+      toast.error("Please enter a valid amount")
+      return
+    }
+
+    if (!selectedTransactionType) {
+      toast.error("Please select a transaction type")
+      return
+    }
+
+    if (!selectedCategoryId) {
+      toast.error("Please select a category")
+      return
+    }
+
+    if (!date) {
+      toast.error("Please select a date")
+      return
+    }
+
+    try {
+      const updateData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        amount: parseFloat(formData.amount),
+        categoryId: parseInt(selectedCategoryId),
+        type: selectedTransactionType as "Income" | "Expense",
+        transactionDate: date.toLocaleDateString('en-CA'),
+      }
+
+      const result = await updateTransaction({
+        id: editingTransaction.Transaction_ID,
+        transaction: updateData
+      }).unwrap()
+
+      if (result.success) {
+        toast.success("Transaction updated successfully!")
+        resetForm()
+        setIsEditDialogOpen(false)
+        setEditingTransaction(null)
+      } else {
+        toast.error("Failed to update transaction")
+      }
+    } catch (error: any) {
+      console.error("Error updating transaction:", error)
+      toast.error(error?.data?.message || "Failed to update transaction")
+    }
+  }
+
+  const handleDeleteTransaction = async (transactionId: number, transactionType: "Income" | "Expense") => {
+    try {
+      const result = await deleteTransaction({
+        id: transactionId,
+        type: transactionType
+      }).unwrap()
+
+      if (result.success) {
+        toast.success("Transaction deleted successfully!")
+        setTransactionToDelete(null)
+      } else {
+        toast.error("Failed to delete transaction")
+      }
+    } catch (error: any) {
+      console.error("Error deleting transaction:", error)
+      toast.error(error?.data?.message || "Failed to delete transaction")
+    }
+  }
+
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim() || !selectedTransactionType) {
       toast.error("Please enter a category name and select a transaction type")
@@ -213,7 +210,7 @@ export default function YoungAdultTransactionsPage() {
     }
 
     try {
-      await addCategory({
+      const result = await addCategory({
         name: newCategoryName.trim(),
         type: selectedTransactionType as "Income" | "Expense",
       }).unwrap()
@@ -221,6 +218,11 @@ export default function YoungAdultTransactionsPage() {
       toast.success("Category created successfully!")
       setNewCategoryName("")
       setIsCustomCategoryMode(false)
+
+      // Auto-select the newly created category
+      if (result?.data?.categoryId) {
+        setSelectedCategoryId(result.data.categoryId.toString())
+      }
     } catch (error) {
       toast.error("Failed to create category")
     }
@@ -293,9 +295,39 @@ export default function YoungAdultTransactionsPage() {
     }
   }
 
-  const handleFormSubmit = () => {
-    if (!formData.title.trim() || !formData.description.trim() || !formData.amount.trim() || !selectedTransactionType || (!selectedCategoryId && !isCustomCategoryMode)) {
-      toast.error("Please fill in all required fields")
+  const resetForm = () => {
+    setFormData({ title: "", description: "", amount: "" })
+    setSelectedTransactionType("")
+    setSelectedCategoryId("")
+    setDate(undefined)
+    setIsCustomCategoryMode(false)
+    setNewCategoryName("")
+    setEditingTransaction(null) // Add this line
+  }
+  const handleFormSubmit = async () => {
+    // Validation
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title")
+      return
+    }
+
+    if (!formData.description.trim()) {
+      toast.error("Please enter a description")
+      return
+    }
+
+    if (!formData.amount.trim() || parseFloat(formData.amount) <= 0) {
+      toast.error("Please enter a valid amount")
+      return
+    }
+
+    if (!selectedTransactionType) {
+      toast.error("Please select a transaction type")
+      return
+    }
+
+    if (!selectedCategoryId && !isCustomCategoryMode) {
+      toast.error("Please select a category")
       return
     }
 
@@ -309,16 +341,47 @@ export default function YoungAdultTransactionsPage() {
       return
     }
 
-    // Here you would typically submit the transaction data to your API
-    toast.success("Transaction added successfully!")
+    try {
+      let categoryIdToUse = selectedCategoryId
 
-    // Reset form
-    setFormData({ title: "", description: "", amount: "" })
-    setSelectedTransactionType("")
-    setSelectedCategoryId("")
-    setDate(undefined)
-    setIsCustomCategoryMode(false)
-    setNewCategoryName("")
+      // If creating a new category, create it first
+      if (isCustomCategoryMode && newCategoryName.trim()) {
+        const categoryResult = await addCategory({
+          name: newCategoryName.trim(),
+          type: selectedTransactionType as "Income" | "Expense",
+        }).unwrap()
+
+        if (categoryResult?.data?.categoryId) {
+          categoryIdToUse = categoryResult.data.categoryId.toString()
+        } else {
+          toast.error("Failed to create category")
+          return
+        }
+      }
+
+      // Create the transaction
+      const transactionData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        amount: parseFloat(formData.amount),
+        categoryId: parseInt(categoryIdToUse),
+        type: selectedTransactionType as "Income" | "Expense",
+        transactionDate: date.toLocaleDateString('en-CA'), // Format as YYYY-MM-DD in local timezone
+      }
+
+      const result = await createTransaction(transactionData).unwrap()
+
+      if (result.success) {
+        toast.success("Transaction added successfully!")
+        resetForm()
+        setIsDialogOpen(false)
+      } else {
+        toast.error("Failed to add transaction")
+      }
+    } catch (error: any) {
+      console.error("Error creating transaction:", error)
+      toast.error(error?.data?.message || "Failed to add transaction")
+    }
   }
 
   return (
@@ -329,81 +392,6 @@ export default function YoungAdultTransactionsPage() {
           <p className="text-muted-foreground">Track and manage all your financial activities</p>
         </div>
         <div className="flex gap-2">
-          {/* Export Button */}
-          <ExportDialog transactions={transactions} userType="young-adult" />
-
-          {/* Category Manager Button */}
-          <Dialog open={showCategoryManager} onOpenChange={setShowCategoryManager}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="bg-transparent">
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Categories
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Manage Categories</DialogTitle>
-                <DialogDescription>Edit or delete your custom categories</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Transaction Type</Label>
-                  <Select value={selectedTransactionType} onValueChange={(value) => setSelectedTransactionType(value as "Income" | "Expense" | "")}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type to view categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Income">Income</SelectItem>
-                      <SelectItem value="Expense">Expense</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedTransactionType && (
-                  <div className="space-y-2">
-                    <Label>Your Custom Categories</Label>
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                      {getEditableCategories().length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No custom categories yet</p>
-                      ) : (
-                        getEditableCategories().map((category) => (
-                          <div key={category.Category_ID} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                            <span className="text-sm font-medium">{category.Name}</span>
-                            <div className="flex items-center gap-1">
-                              {/* Edit Button with Edit2 Icon */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditClick(category)}
-                                disabled={isUpdatingCategory}
-                                className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600"
-                                title="Edit category"
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-
-                              {/* Delete Button with Trash2 Icon (Bin) */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteClick(category)}
-                                disabled={isDeletingCategory}
-                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
-                                title="Delete category"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
           {/* View Toggle */}
           <div className="flex bg-gray-100 rounded-lg p-1">
             <Button
@@ -426,13 +414,14 @@ export default function YoungAdultTransactionsPage() {
             </Button>
           </div>
 
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Transaction
               </Button>
             </DialogTrigger>
+
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Transaction</DialogTitle>
@@ -474,6 +463,8 @@ export default function YoungAdultTransactionsPage() {
                   <Input
                     id="amount"
                     type="number"
+                    step="0.01"
+                    min="0"
                     placeholder="0.00"
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -537,7 +528,8 @@ export default function YoungAdultTransactionsPage() {
                             <Button variant="outline" className="w-full justify-start" >
                               <div className="text-xs text-blue-500">
                                 Edit Custom Categories
-                              </div>                            </Button>
+                              </div>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="w-72" align="start">
                             {getAvailableCategories().filter(cat => !cat.Is_Default).length === 0 ? (
@@ -619,12 +611,14 @@ export default function YoungAdultTransactionsPage() {
                       <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                     </PopoverContent>
                   </Popover>
+
                 </div>
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={handleFormSubmit}
+                  disabled={isCreatingTransaction}
                 >
-                  Add Transaction
+                  {isCreatingTransaction ? "Adding Transaction..." : "Add Transaction"}
                 </Button>
               </div>
             </DialogContent>
@@ -668,8 +662,127 @@ export default function YoungAdultTransactionsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+            <DialogDescription>Update the transaction details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-type">Transaction Type</Label>
+              <Select disabled={true} value={selectedTransactionType} onValueChange={handleTransactionTypeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent >
+                  <SelectItem value="Income">Income</SelectItem>
+                  <SelectItem value="Expense">Expense</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                placeholder="e.g., Monthly Salary Payment"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                placeholder="e.g., Grocery shopping"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-amount">Amount (LKR)</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-category">Category</Label>
+              <Select
+                value={selectedCategoryId}
+                onValueChange={(value) => setSelectedCategoryId(value)}
+                disabled={!selectedTransactionType}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      !selectedTransactionType
+                        ? "Select transaction type first"
+                        : isCategoriesLoading
+                          ? "Loading categories..."
+                          : "Select category"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Default categories first */}
+                  {getAvailableCategories().filter(cat => cat.Is_Default).map((category) => (
+                    <SelectItem key={category.Category_ID} value={category.Category_ID.toString()}>
+                      {category.Name} <span className="text-xs text-muted-foreground">(Default)</span>
+                    </SelectItem>
+                  ))}
+                  {/* Custom categories */}
+                  {getAvailableCategories().filter(cat => !cat.Is_Default).map((category) => (
+                    <SelectItem key={category.Category_ID} value={category.Category_ID.toString()}>
+                      {category.Name} <span className="text-xs text-blue-600">(Custom)</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleUpdateTransaction}
+                disabled={isUpdatingTransaction}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isUpdatingTransaction ? "Updating..." : "Update Transaction"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false)
+                  setEditingTransaction(null)
+                  resetForm()
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      {/* Delete Category Alert Dialog */}
       <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -692,12 +805,38 @@ export default function YoungAdultTransactionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Delete Category Alert Dialog */}
+      <AlertDialog open={!!transactionToDelete} onOpenChange={() => setTransactionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{transactionToDelete?.Title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                transactionToDelete &&
+                handleDeleteTransaction(transactionToDelete.Transaction_ID, transactionToDelete.Type)
+              }
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeletingTransaction}
+            >
+              {isDeletingTransaction ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-600">Total Income</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -708,7 +847,7 @@ export default function YoungAdultTransactionsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium text-red-600">Total Expenses</CardTitle>
             <ArrowDownRight className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -719,7 +858,7 @@ export default function YoungAdultTransactionsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-600">Net Balance</CardTitle>
             <CalendarIcon className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -729,11 +868,20 @@ export default function YoungAdultTransactionsPage() {
         </Card>
       </div>
 
+      <div className="w-full  flex justify-end ">
+        <ExportDialog transactions={transactions} userType="young-adult" />
+      </div>
+
       {/* Main Content - Calendar or List View */}
       {viewMode === "calendar" ? (
         <TransactionCalendar transactions={transactions} userType="young-adult" />
       ) : (
-        <TransactionList transactions={transactions} userType="young-adult" />
+        <TransactionList
+          transactions={transactions}
+          userType="young-adult"
+          onEditTransaction={handleEditTransaction}
+          onDeleteTransaction={setTransactionToDelete}
+        />
       )}
     </div>
   )

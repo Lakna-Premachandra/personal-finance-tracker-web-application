@@ -17,16 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { Download, FileText, FileSpreadsheet, CalendarIcon, Filter } from "lucide-react"
 import { format } from "date-fns"
+import { Transaction } from "@/services/controllers/transactionController"
 
-interface Transaction {
-  id: number
-  type: "income" | "expense"
-  description: string
-  amount: number
-  category: string
-  date: string
-  time: string
-}
+
 
 interface ExportDialogProps {
   transactions: Transaction[]
@@ -106,18 +99,18 @@ export function ExportDialog({ transactions, userType }: ExportDialogProps) {
       }
 
       filtered = filtered.filter((transaction) => {
-        const transactionDate = new Date(transaction.date)
+        const transactionDate = new Date(transaction.Transaction_Date)
         return transactionDate >= filterStartDate && transactionDate <= filterEndDate
       })
     }
 
     // Filter by categories
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter((transaction) => selectedCategories.includes(transaction.category))
+      filtered = filtered.filter((transaction) => selectedCategories.includes(transaction.Category_Name))
     }
 
     // Filter by types
-    filtered = filtered.filter((transaction) => selectedTypes.includes(transaction.type))
+    filtered = filtered.filter((transaction) => selectedTypes.includes(transaction.Type.toLowerCase() ))
 
     return filtered
   }
@@ -128,12 +121,12 @@ export function ExportDialog({ transactions, userType }: ExportDialogProps) {
       headers.join(","),
       ...data.map((transaction) =>
         [
-          transaction.date,
-          transaction.time,
-          transaction.type,
-          `"${transaction.description}"`,
-          transaction.category,
-          transaction.amount,
+          transaction.Transaction_Date,
+          transaction.Transaction_Date,
+          transaction.Type,
+          `"${transaction.Description}"`,
+          transaction.Category_Name,
+          transaction.Amount >= 0 ? `LKR ${transaction.Amount}` : `-LKR ${Math.abs(transaction.Amount)}`,
         ].join(","),
       ),
     ].join("\n")
@@ -151,8 +144,8 @@ export function ExportDialog({ transactions, userType }: ExportDialogProps) {
 
   const exportToPDF = (data: Transaction[]) => {
     // Create a simple HTML structure for PDF generation
-    const totalIncome = data.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-    const totalExpenses = Math.abs(data.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0))
+    const totalIncome = data.filter((t) => t.Type === "Income").reduce((sum, t) => sum + t.Amount, 0)
+    const totalExpenses = Math.abs(data.filter((t) => t.Type === "Expense").reduce((sum, t) => sum + t.Amount, 0))
     const netBalance = totalIncome - totalExpenses
 
     const htmlContent = `
@@ -208,12 +201,12 @@ export function ExportDialog({ transactions, userType }: ExportDialogProps) {
                 .map(
                   (transaction) => `
                 <tr>
-                  <td>${transaction.date}</td>
-                  <td>${transaction.time}</td>
-                  <td class="${transaction.type}">${transaction.type}</td>
-                  <td>${transaction.description}</td>
-                  <td>${transaction.category}</td>
-                  <td class="${transaction.type}">${transaction.type === "income" ? "+" : ""}LKR ${Math.abs(transaction.amount).toLocaleString()}</td>
+                  <td>${transaction.Transaction_Date}</td>
+                  <td>${transaction.Transaction_Date}</td>
+                  <td class="${transaction.Type}">${transaction.Type}</td>
+                  <td>${transaction.Description}</td>
+                  <td>${transaction.Category_Name}</td>
+                  <td class="${transaction.Type}">${transaction.Type === "Income" ? "+" : ""}LKR ${Math.abs(transaction.Amount).toLocaleString()}</td>
                 </tr>
               `,
                 )
@@ -262,7 +255,7 @@ export function ExportDialog({ transactions, userType }: ExportDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent">
+        <Button  className="border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent">
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
@@ -282,30 +275,6 @@ export function ExportDialog({ transactions, userType }: ExportDialogProps) {
             <Label className="text-sm font-medium">Export Format</Label>
             <div className="flex gap-4 mt-2">
               <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="csv"
-                  name="format"
-                  value="csv"
-                  checked={exportFormat === "csv"}
-                  onChange={(e) => setExportFormat(e.target.value as "csv" | "pdf")}
-                  className="text-blue-600"
-                />
-                <label htmlFor="csv" className="flex items-center gap-2 cursor-pointer">
-                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
-                  CSV File
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="pdf"
-                  name="format"
-                  value="pdf"
-                  checked={exportFormat === "pdf"}
-                  onChange={(e) => setExportFormat(e.target.value as "csv" | "pdf")}
-                  className="text-blue-600"
-                />
                 <label htmlFor="pdf" className="flex items-center gap-2 cursor-pointer">
                   <FileText className="h-4 w-4 text-red-600" />
                   PDF Report
