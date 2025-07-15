@@ -66,6 +66,7 @@ export default function YoungAdultTransactionsPage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [showValidation, setShowValidation] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -119,12 +120,15 @@ export default function YoungAdultTransactionsPage() {
     setSelectedCategoryId(transaction.Category_ID.toString())
     setDate(new Date(transaction.Transaction_Date))
     setIsEditDialogOpen(true)
+    setShowValidation(false)
   }
 
   const handleUpdateTransaction = async () => {
     if (!editingTransaction) return
 
-    // Same validation as handleFormSubmit
+    setShowValidation(true)
+
+    // Validation
     if (!formData.title.trim()) {
       toast.error("Please enter a title")
       return
@@ -160,6 +164,7 @@ export default function YoungAdultTransactionsPage() {
         title: formData.title.trim(),
         description: formData.description.trim(),
         amount: parseFloat(formData.amount),
+
         categoryId: parseInt(selectedCategoryId),
         type: selectedTransactionType as "Income" | "Expense",
         transactionDate: date.toLocaleDateString('en-CA'),
@@ -175,6 +180,7 @@ export default function YoungAdultTransactionsPage() {
         resetForm()
         setIsEditDialogOpen(false)
         setEditingTransaction(null)
+        setShowValidation(false)
       } else {
         toast.error("Failed to update transaction")
       }
@@ -302,9 +308,12 @@ export default function YoungAdultTransactionsPage() {
     setDate(undefined)
     setIsCustomCategoryMode(false)
     setNewCategoryName("")
-    setEditingTransaction(null) // Add this line
+    setEditingTransaction(null)
+    setShowValidation(false)
   }
   const handleFormSubmit = async () => {
+    setShowValidation(true)
+
     // Validation
     if (!formData.title.trim()) {
       toast.error("Please enter a title")
@@ -414,7 +423,10 @@ export default function YoungAdultTransactionsPage() {
             </Button>
           </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open)
+            if (!open) setShowValidation(false)
+          }}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="mr-2 h-4 w-4" />
@@ -439,15 +451,22 @@ export default function YoungAdultTransactionsPage() {
                       <SelectItem value="Expense">Expense</SelectItem>
                     </SelectContent>
                   </Select>
+                  {showValidation && !selectedTransactionType && (
+                    <span className="text-xs text-red-500">Required</span>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input
                     id="title"
+                    required
                     placeholder="e.g., Monthly Salary Payment"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
+                  {showValidation && !formData.title.trim() && (
+                    <span className="text-xs text-red-500">Required</span>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="description">Description</Label>
@@ -457,6 +476,9 @@ export default function YoungAdultTransactionsPage() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
+                  {showValidation && !formData.description.trim() && (
+                    <span className="text-xs text-red-500">Required</span>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="amount">Amount (LKR)</Label>
@@ -469,6 +491,9 @@ export default function YoungAdultTransactionsPage() {
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   />
+                  {showValidation && (!formData.amount.trim() || parseFloat(formData.amount) <= 0) && (
+                    <span className="text-xs text-red-500">Required</span>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="category">Category</Label>
@@ -490,13 +515,11 @@ export default function YoungAdultTransactionsPage() {
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* Default categories first */}
                         {getAvailableCategories().filter(cat => cat.Is_Default).map((category) => (
                           <SelectItem key={category.Category_ID} value={category.Category_ID.toString()}>
                             {category.Name} <span className="text-xs text-muted-foreground">(Default)</span>
                           </SelectItem>
                         ))}
-                        {/* Custom categories */}
                         {getAvailableCategories().filter(cat => !cat.Is_Default).map((category) => (
                           <SelectItem
                             key={category.Category_ID}
@@ -513,14 +536,17 @@ export default function YoungAdultTransactionsPage() {
                             </span>
                           </SelectItem>
                         ))}
-
                         <SelectItem value="create-new" className="text-blue-600 font-medium">
                           + Create New Category
                         </SelectItem>
                       </SelectContent>
                     </Select>
-
-                    {/* Quick Edit Categories Dropdown */}
+                    {showValidation && (!selectedCategoryId && !isCustomCategoryMode) && (
+                      <span className="text-xs text-red-500">Required</span>
+                    )}
+                    {showValidation && isCustomCategoryMode && !newCategoryName.trim() && (
+                      <span className="text-xs text-red-500">Required</span>
+                    )}
                     {selectedTransactionType && (
                       <div className="relative">
                         <DropdownMenu>
@@ -575,7 +601,6 @@ export default function YoungAdultTransactionsPage() {
                         </DropdownMenu>
                       </div>
                     )}
-
                     {isCustomCategoryMode && (
                       <div className="flex gap-2">
                         <Input
@@ -611,7 +636,9 @@ export default function YoungAdultTransactionsPage() {
                       <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                     </PopoverContent>
                   </Popover>
-
+                  {showValidation && !date && (
+                    <span className="text-xs text-red-500">Required</span>
+                  )}
                 </div>
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -662,7 +689,10 @@ export default function YoungAdultTransactionsPage() {
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open)
+        if (!open) setShowValidation(false)
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Transaction</DialogTitle>
@@ -675,11 +705,14 @@ export default function YoungAdultTransactionsPage() {
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
-                <SelectContent >
+                <SelectContent>
                   <SelectItem value="Income">Income</SelectItem>
                   <SelectItem value="Expense">Expense</SelectItem>
                 </SelectContent>
               </Select>
+              {showValidation && !selectedTransactionType && (
+                <span className="text-xs text-red-500">Required</span>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-title">Title</Label>
@@ -689,6 +722,9 @@ export default function YoungAdultTransactionsPage() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
+              {showValidation && !formData.title.trim() && (
+                <span className="text-xs text-red-500">Required</span>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-description">Description</Label>
@@ -698,6 +734,9 @@ export default function YoungAdultTransactionsPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
+              {showValidation && !formData.description.trim() && (
+                <span className="text-xs text-red-500">Required</span>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-amount">Amount (LKR)</Label>
@@ -710,6 +749,9 @@ export default function YoungAdultTransactionsPage() {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
               />
+              {showValidation && (!formData.amount.trim() || parseFloat(formData.amount) <= 0) && (
+                <span className="text-xs text-red-500">Required</span>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-category">Category</Label>
@@ -730,13 +772,11 @@ export default function YoungAdultTransactionsPage() {
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Default categories first */}
                   {getAvailableCategories().filter(cat => cat.Is_Default).map((category) => (
                     <SelectItem key={category.Category_ID} value={category.Category_ID.toString()}>
                       {category.Name} <span className="text-xs text-muted-foreground">(Default)</span>
                     </SelectItem>
                   ))}
-                  {/* Custom categories */}
                   {getAvailableCategories().filter(cat => !cat.Is_Default).map((category) => (
                     <SelectItem key={category.Category_ID} value={category.Category_ID.toString()}>
                       {category.Name} <span className="text-xs text-blue-600">(Custom)</span>
@@ -744,6 +784,9 @@ export default function YoungAdultTransactionsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {showValidation && !selectedCategoryId && (
+                <span className="text-xs text-red-500">Required</span>
+              )}
             </div>
             <div>
               <Label>Date</Label>
@@ -758,6 +801,9 @@ export default function YoungAdultTransactionsPage() {
                   <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                 </PopoverContent>
               </Popover>
+              {showValidation && !date && (
+                <span className="text-xs text-red-500">Required</span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button
@@ -805,7 +851,6 @@ export default function YoungAdultTransactionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {/* Delete Category Alert Dialog */}
       <AlertDialog open={!!transactionToDelete} onOpenChange={() => setTransactionToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -832,7 +877,6 @@ export default function YoungAdultTransactionsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -868,11 +912,10 @@ export default function YoungAdultTransactionsPage() {
         </Card>
       </div>
 
-      <div className="w-full  flex justify-end ">
+      <div className="w-full flex justify-end">
         <ExportDialog transactions={transactions} userType="young-adult" />
       </div>
 
-      {/* Main Content - Calendar or List View */}
       {viewMode === "calendar" ? (
         <TransactionCalendar transactions={transactions} userType="young-adult" />
       ) : (
