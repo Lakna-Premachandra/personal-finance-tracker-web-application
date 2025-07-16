@@ -1,37 +1,59 @@
 // components/ProtectedRoute.tsx
-import { useEffect } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
-import { useRouter } from 'next/router' // or 'next/navigation' for app router
-import { initializeAuth } from '@/store/slices/authSlice'
-import { RechartsRootState } from 'recharts/types/state/store'
+'use client';
+
+import { useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { RootState } from '@/store/store';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children: React.ReactNode;
+  allowedUserTypes?: ('Young-Adult' | 'Student')[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const dispatch = useDispatch()
-  const router = useRouter()
-  const { isAuthenticated, token } = useSelector((state: RechartsRootState) => state.auth)
+export default function ProtectedRoute({ 
+  children, 
+  allowedUserTypes 
+}: ProtectedRouteProps) {
+  const router = useRouter();
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    // Initialize auth state from sessionStorage on component mount
-    dispatch(initializeAuth())
-  }, [dispatch])
-
-  useEffect(() => {
-    // Check authentication after state is initialized
-    if (!isAuthenticated && !token) {
-      router.push('/login')
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
     }
-  }, [isAuthenticated, token, router])
 
-  // Show loading or return null while redirecting
+    // Check if user type is allowed for this route
+    if (allowedUserTypes && user && !allowedUserTypes.includes(user.type)) {
+      router.push('/unauthorized'); // or redirect to appropriate page
+      return;
+    }
+  }, [isAuthenticated, user, router, allowedUserTypes]);
+
+  // Show loading or nothing while redirecting
   if (!isAuthenticated) {
-    return <div>Redirecting to login...</div> // or your loading component
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+          <p className="mt-4">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
-  return <>{children}</>
-}
+  // Check user type authorization
+  if (allowedUserTypes && user && !allowedUserTypes.includes(user.type)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p>Unauthorized access</p>
+        </div>
+      </div>
+    );
+  }
 
-export default ProtectedRoute
+  return <>{children}</>;
+}
