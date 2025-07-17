@@ -10,20 +10,11 @@ import { store } from "@/store/store";
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { initializeAuth } from '@/store/slices/authSlice';
+import AuthProvider from "@/components/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Create a wrapper component to use Redux hooks
-function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const dispatch = useDispatch();
 
-  useEffect(() => {
-    // Initialize auth state from localStorage on app start
-    dispatch(initializeAuth());
-  }, [dispatch]);
-
-  return <>{children}</>;
-}
 
 export default function RootLayout({
   children,
@@ -34,16 +25,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <Provider store={store}>
-          <AuthInitializer>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="light"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {children}
-            </ThemeProvider>
-          </AuthInitializer>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+
         </Provider>
       </body>
     </html>
