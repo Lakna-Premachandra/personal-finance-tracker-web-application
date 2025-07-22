@@ -16,20 +16,20 @@ export async function GET(
       );
     }
 
-    const transactionId = parseInt(params.id);
-    if (isNaN(transactionId)) {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') as 'Income' | 'Expense';
+    
+    if (!type || !['Income', 'Expense'].includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid transaction ID' },
+        { error: 'Type parameter (Income or Expense) is required' },
         { status: 400 }
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') as 'Income' | 'Expense';
-
-    if (!type || !['Income', 'Expense'].includes(type)) {
+    const transactionId = parseInt(params.id);
+    if (isNaN(transactionId)) {
       return NextResponse.json(
-        { error: 'Type parameter is required and must be either Income or Expense' },
+        { error: 'Invalid transaction ID' },
         { status: 400 }
       );
     }
@@ -71,16 +71,8 @@ export async function PUT(
       );
     }
 
-    const transactionId = parseInt(params.id);
-    if (isNaN(transactionId)) {
-      return NextResponse.json(
-        { error: 'Invalid transaction ID' },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
-    const { title, description, amount, categoryId, type, transactionDate  } = body;
+    const { title, description, amount, categoryId, type, transactionDate } = body;
 
     // Validate input
     if (!title || !amount || !categoryId || !type) {
@@ -104,25 +96,12 @@ export async function PUT(
       );
     }
 
-    // Validate transaction date if provided
-    if (transactionDate) {
-      const parsedDate = new Date(transactionDate);
-      if (isNaN(parsedDate.getTime())) {
-        return NextResponse.json(
-          { error: 'Invalid transaction date format' },
-          { status: 400 }
-        );
-      }
-      
-      // Check if transaction date is not in the future
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (parsedDate > today) {
-        return NextResponse.json(
-          { error: 'Transaction date cannot be in the future' },
-          { status: 400 }
-        );
-      }
+    const transactionId = parseInt(params.id);
+    if (isNaN(transactionId)) {
+      return NextResponse.json(
+        { error: 'Invalid transaction ID' },
+        { status: 400 }
+      );
     }
 
     const transactionInput = {
@@ -133,7 +112,12 @@ export async function PUT(
       transactionDate: transactionDate || undefined
     };
 
-    const result = await TransactionService.updateTransaction(transactionId, user.userId, type, transactionInput);
+    let result;
+    if (type === 'Income') {
+      result = await TransactionService.updateIncomeTransaction(transactionId, user.userId, transactionInput);
+    } else {
+      result = await TransactionService.updateExpenseTransaction(transactionId, user.userId, transactionInput);
+    }
 
     if (result.Status === 'ERROR') {
       return NextResponse.json(
@@ -144,7 +128,10 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message: result.Message
+      message: result.Message,
+      data: {
+        budgetStatus: 'budgetStatus' in result ? result.budgetStatus : undefined
+      }
     });
 
   } catch (error) {
@@ -170,6 +157,16 @@ export async function DELETE(
       );
     }
 
+    const body = await request.json();
+    const { type, categoryId, transactionDate } = body;
+
+    if (!type || !['Income', 'Expense'].includes(type)) {
+      return NextResponse.json(
+        { error: 'Type (Income or Expense) is required' },
+        { status: 400 }
+      );
+    }
+
     const transactionId = parseInt(params.id);
     if (isNaN(transactionId)) {
       return NextResponse.json(
@@ -178,17 +175,23 @@ export async function DELETE(
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') as 'Income' | 'Expense';
-
-    if (!type || !['Income', 'Expense'].includes(type)) {
-      return NextResponse.json(
-        { error: 'Type parameter is required and must be either Income or Expense' },
-        { status: 400 }
+    let result;
+    if (type === 'Income') {
+      result = await TransactionService.deleteIncomeTransaction(transactionId, user.userId);
+    } else {
+      if (!categoryId || !transactionDate) {
+        return NextResponse.json(
+          { error: 'CategoryId and transactionDate are required for expense deletion' },
+          { status: 400 }
+        );
+      }
+      result = await TransactionService.deleteExpenseTransaction(
+        transactionId, 
+        user.userId, 
+        parseInt(categoryId), 
+        transactionDate
       );
     }
-
-    const result = await TransactionService.deleteTransaction(transactionId, user.userId, type);
 
     if (result.Status === 'ERROR') {
       return NextResponse.json(
@@ -199,7 +202,10 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: result.Message
+      message: result.Message,
+      data: {
+        budgetStatus: 'budgetStatus' in result ? result.budgetStatus : undefined
+      }
     });
 
   } catch (error) {

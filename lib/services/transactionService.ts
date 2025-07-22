@@ -1,4 +1,5 @@
 import { connectToDatabase, sql } from '@/lib/database/db';
+import { BudgetService } from './budgetService';
 
 export interface Transaction {
   Transaction_ID: number;
@@ -25,6 +26,18 @@ export interface TransactionResponse {
   Status: 'SUCCESS' | 'ERROR';
   Message: string;
   Transaction_ID?: number;
+}
+
+export interface TransactionWithBudgetInfo extends TransactionResponse {
+  budgetStatus?: {
+    hasBudget: boolean;
+    categoryName: string;
+    budgetAmount?: number;
+    spentAmount?: number;
+    remainingAmount?: number;
+    percentageUsed?: number;
+    status?: string;
+  };
 }
 
 export class TransactionService {
@@ -132,7 +145,7 @@ export class TransactionService {
   }
 
   // Add expense transaction
-  static async addExpenseTransaction(userId: number, transaction: TransactionInput): Promise<TransactionResponse> {
+  static async addExpenseTransaction(userId: number, transaction: TransactionInput): Promise<TransactionWithBudgetInfo> {
     try {
       const pool = await connectToDatabase();
       const request = pool.request()
@@ -151,10 +164,41 @@ export class TransactionService {
       const result = await request.execute('AddExpenseTransaction');
       
       const response = result.recordset[0];
+      // If transaction was successful, get updated budget status
+      let budgetStatus = null;
+      if (response.Status === 'SUCCESS') {
+        const transactionDate = new Date(transaction.transactionDate || new Date());
+        const year = transactionDate.getFullYear();
+        const month = transactionDate.getMonth() + 1;
+
+        try {
+          budgetStatus = await BudgetService.getBudgetStatus(
+            userId, 
+            transaction.categoryId, 
+            year, 
+            month
+          );
+        } catch (budgetError) {
+          console.log('No budget found for this category and month:', budgetError);
+        }
+      }
+
       return {
         Status: response.Status,
         Message: response.Message,
-        Transaction_ID: response.Transaction_ID
+        Transaction_ID: response.Transaction_ID,
+        budgetStatus: budgetStatus ? {
+          hasBudget: true,
+          categoryName: budgetStatus.Category_Name,
+          budgetAmount: budgetStatus.Budget_Amount,
+          spentAmount: budgetStatus.Spent_Amount,
+          remainingAmount: budgetStatus.Remaining_Amount,
+          percentageUsed: Math.round(budgetStatus.Percentage_Used),
+          status: budgetStatus.Status
+        } : {
+          hasBudget: false,
+          categoryName: 'Unknown Category'
+        }
       };
     } catch (error) {
       console.error('Error adding expense transaction:', error);
@@ -194,7 +238,7 @@ export class TransactionService {
   }
 
   // Update expense transaction
-  static async updateExpenseTransaction(transactionId: number, userId: number, transaction: TransactionInput): Promise<TransactionResponse> {
+  static async updateExpenseTransaction(transactionId: number, userId: number, transaction: TransactionInput): Promise<TransactionWithBudgetInfo> {
     try {
       const pool = await connectToDatabase();
       const request = pool.request()
@@ -214,9 +258,40 @@ export class TransactionService {
       const result = await request.execute('UpdateExpenseTransaction');
       
       const response = result.recordset[0];
+      // If transaction was updated successfully, get updated budget status
+      let budgetStatus = null;
+      if (response.Status === 'SUCCESS') {
+        const transactionDate = new Date(transaction.transactionDate || new Date());
+        const year = transactionDate.getFullYear();
+        const month = transactionDate.getMonth() + 1;
+
+        try {
+          budgetStatus = await BudgetService.getBudgetStatus(
+            userId, 
+            transaction.categoryId, 
+            year, 
+            month
+          );
+        } catch (budgetError) {
+          console.log('No budget found for this category and month:', budgetError);
+        }
+      }
+
       return {
         Status: response.Status,
-        Message: response.Message
+        Message: response.Message,
+        budgetStatus: budgetStatus ? {
+          hasBudget: true,
+          categoryName: budgetStatus.Category_Name,
+          budgetAmount: budgetStatus.Budget_Amount,
+          spentAmount: budgetStatus.Spent_Amount,
+          remainingAmount: budgetStatus.Remaining_Amount,
+          percentageUsed: Math.round(budgetStatus.Percentage_Used),
+          status: budgetStatus.Status
+        } : {
+          hasBudget: false,
+          categoryName: 'Unknown Category'
+        }
       };
     } catch (error) {
       console.error('Error updating expense transaction:', error);
@@ -245,7 +320,7 @@ export class TransactionService {
   }
 
   // Delete expense transaction (no changes needed)
-  static async deleteExpenseTransaction(transactionId: number, userId: number): Promise<TransactionResponse> {
+  static async deleteExpenseTransaction(transactionId: number, userId: number, categoryId: number, transactionDate: string): Promise<TransactionWithBudgetInfo> {
     try {
       const pool = await connectToDatabase();
       const result = await pool.request()
@@ -254,9 +329,40 @@ export class TransactionService {
         .execute('DeleteExpenseTransaction');
       
       const response = result.recordset[0];
+      // If transaction was deleted successfully, get updated budget status
+      let budgetStatus = null;
+      if (response.Status === 'SUCCESS') {
+        const date = new Date(transactionDate);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+
+        try {
+          budgetStatus = await BudgetService.getBudgetStatus(
+            userId, 
+            categoryId, 
+            year, 
+            month
+          );
+        } catch (budgetError) {
+          console.log('No budget found for this category and month:', budgetError);
+        }
+      }
+
       return {
         Status: response.Status,
-        Message: response.Message
+        Message: response.Message,
+        budgetStatus: budgetStatus ? {
+          hasBudget: true,
+          categoryName: budgetStatus.Category_Name,
+          budgetAmount: budgetStatus.Budget_Amount,
+          spentAmount: budgetStatus.Spent_Amount,
+          remainingAmount: budgetStatus.Remaining_Amount,
+          percentageUsed: Math.round(budgetStatus.Percentage_Used),
+          status: budgetStatus.Status
+        } : {
+          hasBudget: false,
+          categoryName: 'Unknown Category'
+        }
       };
     } catch (error) {
       console.error('Error deleting expense transaction:', error);
@@ -264,30 +370,160 @@ export class TransactionService {
     }
   }
 
-  // Generic add transaction method
-  static async addTransaction(userId: number, type: 'Income' | 'Expense', transaction: TransactionInput): Promise<TransactionResponse> {
-    if (type === 'Income') {
-      return this.addIncomeTransaction(userId, transaction);
-    } else {
-      return this.addExpenseTransaction(userId, transaction);
+  // Get transactions by date range
+  static async getTransactionsByDateRange(
+    userId: number, 
+    startDate: string, 
+    endDate: string, 
+    type?: 'Income' | 'Expense'
+  ): Promise<Transaction[]> {
+    try {
+      const pool = await connectToDatabase();
+      const result = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('StartDate', sql.Date, startDate)
+        .input('EndDate', sql.Date, endDate)
+        .input('Type', sql.VarChar(10), type || null)
+        .execute('GetTransactionsByDateRange');
+      
+      return result.recordset.map((row: any) => ({
+        Transaction_ID: row.Transaction_ID,
+        User_ID: row.User_ID,
+        Title: row.Title,
+        Description: row.Description,
+        Amount: row.Amount,
+        Type: row.Type || row.Category_Type,
+        Category_ID: row.Category_ID,
+        Category_Name: row.Category_Name,
+        Category_Type: row.Category_Type,
+        Transaction_Date: row.Transaction_Date,
+        Created_Date: row.Created_Date,
+        Updated_Date: row.Updated_Date
+      }));
+    } catch (error) {
+      console.error('Error getting transactions by date range:', error);
+      throw new Error('Failed to fetch transactions by date range');
     }
   }
 
-  // Generic update transaction method
-  static async updateTransaction(transactionId: number, userId: number, type: 'Income' | 'Expense', transaction: TransactionInput): Promise<TransactionResponse> {
-    if (type === 'Income') {
-      return this.updateIncomeTransaction(transactionId, userId, transaction);
-    } else {
-      return this.updateExpenseTransaction(transactionId, userId, transaction);
+  // Get transactions by category
+  static async getTransactionsByCategory(
+    userId: number, 
+    categoryId: number, 
+    type?: 'Income' | 'Expense'
+  ): Promise<Transaction[]> {
+    try {
+      const pool = await connectToDatabase();
+      const result = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('CategoryID', sql.Int, categoryId)
+        .input('Type', sql.VarChar(10), type || null)
+        .execute('GetTransactionsByCategory');
+      
+      return result.recordset.map((row: any) => ({
+        Transaction_ID: row.Transaction_ID,
+        User_ID: row.User_ID,
+        Title: row.Title,
+        Description: row.Description,
+        Amount: row.Amount,
+        Type: row.Type || row.Category_Type,
+        Category_ID: row.Category_ID,
+        Category_Name: row.Category_Name,
+        Category_Type: row.Category_Type,
+        Transaction_Date: row.Transaction_Date,
+        Created_Date: row.Created_Date,
+        Updated_Date: row.Updated_Date
+      }));
+    } catch (error) {
+      console.error('Error getting transactions by category:', error);
+      throw new Error('Failed to fetch transactions by category');
     }
   }
 
-  // Generic delete transaction method
-  static async deleteTransaction(transactionId: number, userId: number, type: 'Income' | 'Expense'): Promise<TransactionResponse> {
-    if (type === 'Income') {
-      return this.deleteIncomeTransaction(transactionId, userId);
-    } else {
-      return this.deleteExpenseTransaction(transactionId, userId);
+  // Get monthly spending summary with budget comparison
+  static async getMonthlySpendingSummary(
+    userId: number, 
+    year: number, 
+    month: number
+  ): Promise<{
+    totalIncome: number;
+    totalExpenses: number;
+    netAmount: number;
+    budgetSummary: any;
+    categoryBreakdown: Array<{
+      categoryId: number;
+      categoryName: string;
+      totalSpent: number;
+      budgetAmount?: number;
+      remainingBudget?: number;
+      percentageUsed?: number;
+      status?: string;
+    }>;
+  }> {
+    try {
+      // Get all transactions for the month
+      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+      
+      const [incomeTransactions, expenseTransactions, budgetSummary, budgetCategories] = await Promise.all([
+        this.getTransactionsByDateRange(userId, startDate, endDate, 'Income'),
+        this.getTransactionsByDateRange(userId, startDate, endDate, 'Expense'),
+        BudgetService.getBudgetSummary(userId, year, month),
+        BudgetService.getBudgetCategoriesWithStatus(userId, year, month)
+      ]);
+
+      const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.Amount, 0);
+      const totalExpenses = expenseTransactions.reduce((sum, t) => sum + t.Amount, 0);
+
+      // Create category breakdown with budget comparison
+      const categoryMap = new Map();
+      
+      // Add expense data
+      expenseTransactions.forEach(transaction => {
+        const key = transaction.Category_ID;
+        if (!categoryMap.has(key)) {
+          categoryMap.set(key, {
+            categoryId: transaction.Category_ID,
+            categoryName: transaction.Category_Name || 'Unknown',
+            totalSpent: 0
+          });
+        }
+        categoryMap.get(key).totalSpent += transaction.Amount;
+      });
+
+      // Add budget data
+      budgetCategories.forEach(budget => {
+        const key = budget.Category_ID;
+        if (categoryMap.has(key)) {
+          const category = categoryMap.get(key);
+          category.budgetAmount = budget.Budget_Amount;
+          category.remainingBudget = budget.Remaining_Amount;
+          category.percentageUsed = budget.Percentage_Used;
+          category.status = budget.Status;
+        } else if (budget.Budget_Amount > 0) {
+          // Budget exists but no spending yet
+          categoryMap.set(key, {
+            categoryId: budget.Category_ID,
+            categoryName: budget.Category_Name,
+            totalSpent: 0,
+            budgetAmount: budget.Budget_Amount,
+            remainingBudget: budget.Remaining_Amount,
+            percentageUsed: 0,
+            status: 'Under Budget'
+          });
+        }
+      });
+
+      return {
+        totalIncome,
+        totalExpenses,
+        netAmount: totalIncome - totalExpenses,
+        budgetSummary,
+        categoryBreakdown: Array.from(categoryMap.values())
+      };
+    } catch (error) {
+      console.error('Error getting monthly spending summary:', error);
+      throw new Error('Failed to fetch monthly spending summary');
     }
   }
 }
