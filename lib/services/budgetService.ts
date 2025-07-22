@@ -9,12 +9,28 @@ export interface Budget {
   Month: number;
   Created_Date: Date;
   Updated_Date: Date;
-  Category_Name?: string; // For joined queries
+  Category_Name?: string;
 }
 
 export interface BudgetWithCategory extends Budget {
   Category_Name: string;
   Category_Type: 'Income' | 'Expense';
+}
+
+export interface BudgetStatus {
+  Budget_ID: number;
+  Category_ID: number;
+  Category_Name: string;
+  Category_Type: 'Income' | 'Expense';
+  Budget_Amount: number;
+  Spent_Amount: number;
+  Remaining_Amount: number;
+  Percentage_Used: number;
+  Status: 'Under Budget' | 'Over Budget' | 'Exact Budget';
+  Year: number;
+  Month: number;
+  Created_Date: Date;
+  Updated_Date: Date;
 }
 
 export interface BudgetResponse {
@@ -29,6 +45,20 @@ export interface BudgetSummary {
   remaining: number;
   budgetCount: number;
   overBudgetCount: number;
+  overallPercentageUsed: number;
+}
+
+export interface CategoryBudgetStatus {
+  Budget_ID: number;
+  Category_ID: number;
+  Category_Name: string;
+  Budget_Amount: number;
+  Spent_Amount: number;
+  Remaining_Amount: number;
+  Percentage_Used: number;
+  Status: 'Under Budget' | 'Over Budget' | 'Exact Budget';
+  Year: number;
+  Month: number;
 }
 
 export class BudgetService {
@@ -244,7 +274,8 @@ export class BudgetService {
         totalSpent: row.TotalSpent || 0,
         remaining: row.Remaining || 0,
         budgetCount: row.BudgetCount || 0,
-        overBudgetCount: row.OverBudgetCount || 0
+        overBudgetCount: row.OverBudgetCount || 0,
+        overallPercentageUsed: Math.round(row.OverallPercentageUsed || 0)
       };
     } catch (error) {
       console.error('Error getting budget summary:', error);
@@ -313,6 +344,80 @@ export class BudgetService {
     } catch (error) {
       console.error('Error checking budget existence:', error);
       throw new Error('Failed to check budget existence');
+    }
+  }
+
+  // Get budget status for a specific category and month
+  static async getBudgetStatus(
+    userId: number,
+    categoryId: number,
+    year: number,
+    month: number
+  ): Promise<CategoryBudgetStatus | null> {
+    try {
+      const pool = await connectToDatabase();
+      const result = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('CategoryID', sql.Int, categoryId)
+        .input('Year', sql.Int, year)
+        .input('Month', sql.TinyInt, month)
+        .execute('GetBudgetStatus');
+      
+      const row = result.recordset[0];
+      if (!row) return null;
+
+      return {
+        Budget_ID: row.Budget_ID,
+        Category_ID: row.Category_ID,
+        Category_Name: row.Category_Name,
+        Budget_Amount: row.Budget_Amount,
+        Spent_Amount: row.Spent_Amount,
+        Remaining_Amount: row.Remaining_Amount,
+        Percentage_Used: row.Percentage_Used,
+        Status: row.Status,
+        Year: row.Year,
+        Month: row.Month
+      };
+    } catch (error) {
+      console.error('Error getting budget status:', error);
+      throw new Error('Failed to fetch budget status');
+    }
+  }
+
+  // NEW: Get all budget categories with their current status
+  static async getBudgetCategoriesWithStatus(
+    userId: number,
+    year: number,
+    month: number
+  ): Promise<BudgetStatus[]> {
+    try {
+      const pool = await connectToDatabase();
+      const result = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('Year', sql.Int, year)
+        .input('Month', sql.TinyInt, month)
+        .execute('GetBudgetCategoriesWithStatus');
+      
+      return result.recordset.map((row: any) => ({
+        Budget_ID: row.Budget_ID,
+        User_ID: userId,
+        Category_ID: row.Category_ID,
+        Amount: row.Budget_Amount,
+        Year: row.Year,
+        Month: row.Month,
+        Created_Date: row.Created_Date,
+        Updated_Date: row.Updated_Date,
+        Category_Name: row.Category_Name,
+        Category_Type: row.Category_Type,
+        Budget_Amount: row.Budget_Amount,
+        Spent_Amount: row.Spent_Amount,
+        Remaining_Amount: row.Remaining_Amount,
+        Percentage_Used: row.Percentage_Used,
+        Status: row.Status
+      }));
+    } catch (error) {
+      console.error('Error getting budget categories with status:', error);
+      throw new Error('Failed to fetch budget categories with status');
     }
   }
 }

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, amount, categoryId, type, transactionDate  } = body;
+    const { title, description, amount, categoryId, type, transactionDate } = body;
 
     // Validate input
     if (!title || !amount || !categoryId || !type) {
@@ -97,7 +97,12 @@ export async function POST(request: NextRequest) {
       transactionDate: transactionDate || undefined
     };
 
-    const result = await TransactionService.addTransaction(user.userId, type, transactionInput);
+    let result;
+    if (type === 'Income') {
+      result = await TransactionService.addIncomeTransaction(user.userId, transactionInput);
+    } else {
+      result = await TransactionService.addExpenseTransaction(user.userId, transactionInput);
+    }
 
     if (result.Status === 'ERROR') {
       return NextResponse.json(
@@ -109,8 +114,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: result.Message,
-      data: { transactionId: result.Transaction_ID }
-    });
+      data: { 
+        transactionId: result.Transaction_ID,
+        budgetStatus: 'budgetStatus' in result ? result.budgetStatus : undefined
+      }
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Error in POST /api/transactions:', error);

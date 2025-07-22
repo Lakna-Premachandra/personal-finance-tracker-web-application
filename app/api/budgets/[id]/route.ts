@@ -10,27 +10,40 @@ export async function GET(
   try {
     const user = verifyToken(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const budgetId = parseInt(params.id);
     if (isNaN(budgetId)) {
-      return NextResponse.json({ error: 'Invalid budget ID' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid budget ID' },
+        { status: 400 }
+      );
     }
 
     const budget = await BudgetService.getBudgetById(budgetId, user.userId);
-
+    
     if (!budget) {
-      return NextResponse.json({ error: 'Budget not found or access denied' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Budget not found' },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: budget
     });
+
   } catch (error) {
     console.error('Error in GET /api/budgets/[id]:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -45,14 +58,6 @@ export async function PUT(
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      );
-    }
-
-    const budgetId = parseInt(params.id);
-    if (isNaN(budgetId)) {
-      return NextResponse.json(
-        { error: 'Invalid budget ID' },
-        { status: 400 }
       );
     }
 
@@ -87,6 +92,14 @@ export async function PUT(
     if (month < 1 || month > 12) {
       return NextResponse.json(
         { error: 'Month must be between 1 and 12' },
+        { status: 400 }
+      );
+    }
+
+    const budgetId = parseInt(params.id);
+    if (isNaN(budgetId)) {
+      return NextResponse.json(
+        { error: 'Invalid budget ID' },
         { status: 400 }
       );
     }
