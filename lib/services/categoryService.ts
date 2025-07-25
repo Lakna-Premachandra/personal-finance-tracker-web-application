@@ -18,6 +18,7 @@ export interface CategoryResponse {
 
 export interface DeleteCategoryResponse extends CategoryResponse {
   TransactionsReassigned?: number;
+  BudgetsDeleted?: number;
 }
 
 export class CategoryService {
@@ -108,35 +109,46 @@ export class CategoryService {
     }
   }
 
-  static async deleteCategory(categoryId: number, userId: number): Promise<DeleteCategoryResponse> {
-    try {
-      const pool = await connectToDatabase();
-      const result = await pool.request()
-        .input('CategoryID', sql.Int, categoryId)
-        .input('UserID', sql.Int, userId)
-        .execute('DeleteCategory');
-      
-      const response = result.recordset[0];
-      
-      // Parse the message to extract transaction count if present
-      let transactionsReassigned = 0;
-      if (response.Status === 'SUCCESS' && response.Message.includes('transaction(s) reassigned')) {
-        const match = response.Message.match(/(\d+) transaction\(s\) reassigned/);
-        if (match) {
-          transactionsReassigned = parseInt(match[1]);
-        }
+// Updated deleteCategory method in CategoryService class
+static async deleteCategory(categoryId: number, userId: number): Promise<DeleteCategoryResponse> {
+  try {
+    const pool = await connectToDatabase();
+    const result = await pool.request()
+      .input('CategoryID', sql.Int, categoryId)
+      .input('UserID', sql.Int, userId)
+      .execute('DeleteCategory');
+    
+    const response = result.recordset[0];
+    
+    // Parse the message to extract transaction and budget counts
+    let transactionsReassigned = 0;
+    let budgetsDeleted = 0;
+    
+    if (response.Status === 'SUCCESS') {
+      // Extract transaction count
+      const transactionMatch = response.Message.match(/(\d+) transaction\(s\) reassigned/);
+      if (transactionMatch) {
+        transactionsReassigned = parseInt(transactionMatch[1]);
       }
       
-      return {
-        Status: response.Status,
-        Message: response.Message,
-        TransactionsReassigned: transactionsReassigned
-      };
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      throw new Error('Failed to delete category');
+      // Extract budget count
+      const budgetMatch = response.Message.match(/(\d+) budget\(s\) deleted/);
+      if (budgetMatch) {
+        budgetsDeleted = parseInt(budgetMatch[1]);
+      }
     }
+    
+    return {
+      Status: response.Status,
+      Message: response.Message,
+      TransactionsReassigned: transactionsReassigned,
+      BudgetsDeleted: budgetsDeleted
+    };
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    throw new Error('Failed to delete category');
   }
+}
 
   static async getCategoryById(categoryId: number, userId: number): Promise<Category | null> {
     try {

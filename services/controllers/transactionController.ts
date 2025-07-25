@@ -1,4 +1,5 @@
 import { api } from "../baseApi";
+
 export interface Transaction {
     Transaction_ID: number
     User_ID: number
@@ -15,16 +16,18 @@ export interface CreateTransactionRequest {
     title: string
     description: string
     amount: number
-    categoryId: number
     type: 'Income' | 'Expense'
+    categoryId?: number // Optional for Income, Required for Expense
+    transactionDate?: string // Optional for Income, Required for Expense
 }
 
 export interface UpdateTransactionRequest {
     title: string
     description: string
     amount: number
-    categoryId: number
     type: 'Income' | 'Expense'
+    categoryId?: number // Optional for Income, Required for Expense
+    transactionDate?: string // Optional for Income, Required for Expense
 }
 
 export interface TransactionResponse {
@@ -54,7 +57,33 @@ export interface DeleteTransactionResponse {
     success: boolean
     message: string
 }
+export interface BudgetStatus {
+    Budget_ID: number
+    User_ID: number
+    Category_ID: number
+    Amount: number
+    Year: number
+    Month: number
+    Created_Date: string
+    Updated_Date: string
+    Category_Name: string
+    Category_Type: string
+    Budget_Amount: number
+    Spent_Amount: number
+    Remaining_Amount: number
+    Percentage_Used: number
+    Status: string
+}
 
+export interface BudgetStatusResponse {
+    success: boolean
+    data: BudgetStatus[]
+}
+
+export interface BudgetStatusParams {
+    year: number
+    month: number
+}
 export type TransactionType = 'Income' | 'Expense'
 
 // Inject transaction endpoints
@@ -105,15 +134,35 @@ export const transactionApi = api.injectEndpoints({
             ],
         }),
 
-        // DELETE transaction
-        deleteTransaction: builder.mutation<DeleteTransactionResponse, { id: number; type: TransactionType }>({
-            query: ({ id, type }) => ({
-                url: `/transactions/${id}?type=${type}`,
-                method: 'DELETE',
-            }),
+        // DELETE transaction - Fixed the type parameter
+        deleteTransaction: builder.mutation<DeleteTransactionResponse, {
+            id: number;
+            type: TransactionType;
+            categoryId?: number;
+            transactionDate?: string;
+        }>({
+            query: ({ id, type, categoryId, transactionDate }) => {
+                let url = `/transactions/${id}?type=${type}`;
+
+                // Add categoryId and transactionDate for expenses
+                if (type === 'Expense' && categoryId && transactionDate) {
+                    url += `&categoryId=${categoryId}&transactionDate=${transactionDate}`;
+                }
+
+                return {
+                    url,
+                    method: 'DELETE',
+                };
+            },
             invalidatesTags: (result, error, { id }) => [
                 { type: 'Transaction', id },
                 'Transaction',
+            ],
+        }),
+        getBudgetStatus: builder.query<BudgetStatusResponse, BudgetStatusParams>({
+            query: ({ year, month }) => `/budgets/status?year=${year}&month=${month}`,
+            providesTags: (result, error, { year, month }) => [
+                { type: 'Budget', id: `${year}_${month}` },
             ],
         }),
     }),
@@ -127,4 +176,5 @@ export const {
     useCreateTransactionMutation,
     useUpdateTransactionMutation,
     useDeleteTransactionMutation,
+    useGetBudgetStatusQuery,
 } = transactionApi

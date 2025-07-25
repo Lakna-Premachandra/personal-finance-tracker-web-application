@@ -32,12 +32,12 @@ import { ExportDialog } from "@/components/export-dialog"
 import { Plus, CalendarIcon, ArrowUpRight, ArrowDownRight, CalendarIcon as CalendarViewIcon, List } from "lucide-react"
 import { format } from "date-fns"
 import { useGetCategoriesByTypeAndUserTypeQuery } from "@/services/controllers/categoryController"
-import { 
-  useCreateTransactionMutation, 
-  useGetTransactionsQuery, 
-  useUpdateTransactionMutation, 
+import {
+  useCreateTransactionMutation,
+  useGetTransactionsQuery,
+  useUpdateTransactionMutation,
   useDeleteTransactionMutation,
-  Transaction 
+  Transaction
 } from "@/services/controllers/transactionController"
 import { toast } from "@/hooks/use-toast" // Assuming you have toast setup
 
@@ -171,34 +171,59 @@ export default function TransactionsPage() {
     }
   }
 
-  const handleDeleteTransaction = async (transactionId: number, transactionType: "Income" | "Expense") => {
+  const handleDeleteTransaction = async (
+    transactionId: number,
+    transactionType: "Income" | "Expense"
+  ) => {
     try {
-      const result = await deleteTransaction({
+      // Find the transaction to get categoryId and transactionDate for expenses
+      const transactionToDelete = transactions.find(
+        (t) => t.Transaction_ID === transactionId
+      );
+
+      const deleteParams: {
+        id: number;
+        type: "Income" | "Expense";
+        categoryId?: number;
+        transactionDate?: string;
+      } = {
         id: transactionId,
-        type: transactionType
-      }).unwrap()
+        type: transactionType,
+      };
+
+      // Add required parameters for expense transactions
+      if (transactionType === "Expense" && transactionToDelete) {
+        deleteParams.categoryId = Number(transactionToDelete.Category_ID);
+        deleteParams.transactionDate = new Date(
+          transactionToDelete.Transaction_Date
+        ).toLocaleDateString("en-CA");
+      }
+
+      const result = await deleteTransaction(deleteParams).unwrap();
 
       if (result.success) {
         toast({
           title: "Success",
-          description: "Transaction deleted successfully",
-        })
-        setTransactionToDelete(null)
+          description: "Transaction deleted successfully!",
+        });
+        setTransactionToDelete(null);
       } else {
         toast({
           title: "Error",
           description: "Failed to delete transaction",
           variant: "destructive",
-        })
+        });
       }
     } catch (error: any) {
+      console.error("Error deleting transaction:", error);
       toast({
         title: "Error",
         description: error?.data?.message || "Failed to delete transaction",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
+
 
   const handleSubmit = async () => {
     // Validation
@@ -590,9 +615,9 @@ export default function TransactionsPage() {
       {viewMode === "calendar" ? (
         <TransactionCalendar transactions={transactions} userType="student" />
       ) : (
-        <TransactionList 
-          transactions={transactions} 
-          userType="student" 
+        <TransactionList
+          transactions={transactions}
+          userType="student"
           onEditTransaction={handleEditTransaction}
           onDeleteTransaction={setTransactionToDelete}
         />
