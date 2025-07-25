@@ -1,16 +1,12 @@
 'use client';
 
-import type React from "react";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Provider } from "react-redux";
-import { store } from "@/store/store";
-import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { initializeAuth } from '@/store/slices/authSlice';
 import AuthProvider from "@/components/AuthProvider";
+import { store } from "@/store/store";
+import { Inter } from "next/font/google";
+import type React from "react";
+import { Provider } from "react-redux";
+import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +23,7 @@ export default function RootLayout({
         <Provider store={store}>
           <AuthProvider>
             {children}
+            <Toaster />
           </AuthProvider>
 
         </Provider>

@@ -157,12 +157,15 @@ export async function DELETE(
       );
     }
 
-    const body = await request.json();
-    const { type, categoryId, transactionDate } = body;
+    // Get parameters from URL search params instead of request body
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') as 'Income' | 'Expense';
+    const categoryId = searchParams.get('categoryId');
+    const transactionDate = searchParams.get('transactionDate');
 
     if (!type || !['Income', 'Expense'].includes(type)) {
       return NextResponse.json(
-        { error: 'Type (Income or Expense) is required' },
+        { error: 'Type (Income or Expense) is required as query parameter' },
         { status: 400 }
       );
     }
@@ -181,7 +184,7 @@ export async function DELETE(
     } else {
       if (!categoryId || !transactionDate) {
         return NextResponse.json(
-          { error: 'CategoryId and transactionDate are required for expense deletion' },
+          { error: 'CategoryId and transactionDate are required as query parameters for expense deletion' },
           { status: 400 }
         );
       }

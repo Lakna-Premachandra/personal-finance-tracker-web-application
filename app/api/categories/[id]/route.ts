@@ -64,7 +64,7 @@ export async function PUT(
   }
 }
 
-// DELETE: Delete category with transaction reassignment
+// DELETE: Delete category with transaction reassignment and budget deletion
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -86,15 +86,6 @@ export async function DELETE(
       );
     }
 
-    // Get transaction count before deletion for better user feedback
-    let transactionCount = { incomeCount: 0, expenseCount: 0 };
-    try {
-      transactionCount = await CategoryService.getCategoryTransactionCount(categoryId, user.userId);
-    } catch (error) {
-      // If can't get transaction count, proceed with deletion anyway
-      console.warn('Could not get transaction count:', error);
-    }
-
     const result = await CategoryService.deleteCategory(categoryId, user.userId);
 
     if (result.Status === 'ERROR') {
@@ -109,10 +100,21 @@ export async function DELETE(
       message: result.Message
     };
 
-    // Add transaction information if transactions were reassigned
+    // Add detailed information about what was deleted/reassigned
+    const details = [];
+    
+    if (result.BudgetsDeleted && result.BudgetsDeleted > 0) {
+      response.budgetsDeleted = result.BudgetsDeleted;
+      details.push(`${result.BudgetsDeleted} budget(s) were deleted`);
+    }
+
     if (result.TransactionsReassigned && result.TransactionsReassigned > 0) {
       response.transactionsReassigned = result.TransactionsReassigned;
-      response.details = `${result.TransactionsReassigned} transaction(s) were automatically moved to the default category`;
+      details.push(`${result.TransactionsReassigned} transaction(s) were moved to the default category`);
+    }
+
+    if (details.length > 0) {
+      response.details = details.join(', ');
     }
 
     return NextResponse.json(response);

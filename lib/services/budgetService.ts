@@ -283,45 +283,6 @@ export class BudgetService {
     }
   }
 
-  // Get budget vs actual spending comparison
-  static async getBudgetVsActual(
-    userId: number,
-    year: number,
-    month: number
-  ): Promise<Array<{
-    Budget_ID: number;
-    Category_ID: number;
-    Category_Name: string;
-    Budget_Amount: number;
-    Actual_Amount: number;
-    Difference: number;
-    Percentage_Used: number;
-    Status: 'Under' | 'Over' | 'Exact';
-  }>> {
-    try {
-      const pool = await connectToDatabase();
-      const result = await pool.request()
-        .input('UserID', sql.Int, userId)
-        .input('Year', sql.Int, year)
-        .input('Month', sql.TinyInt, month)
-        .execute('GetBudgetVsActual');
-      
-      return result.recordset.map((row: any) => ({
-        Budget_ID: row.Budget_ID,
-        Category_ID: row.Category_ID,
-        Category_Name: row.Category_Name,
-        Budget_Amount: row.Budget_Amount,
-        Actual_Amount: row.Actual_Amount,
-        Difference: row.Difference,
-        Percentage_Used: row.Percentage_Used,
-        Status: row.Status
-      }));
-    } catch (error) {
-      console.error('Error getting budget vs actual:', error);
-      throw new Error('Failed to fetch budget vs actual comparison');
-    }
-  }
-
   // Check if budget exists for category in specific month
   static async checkBudgetExists(
     userId: number,

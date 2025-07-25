@@ -192,23 +192,38 @@ export default function YoungAdultTransactionsPage() {
 
   const handleDeleteTransaction = async (transactionId: number, transactionType: "Income" | "Expense") => {
     try {
-      const result = await deleteTransaction({
+      // Find the transaction to get categoryId and transactionDate for expenses
+      const transactionToDelete = transactions.find(t => t.Transaction_ID === transactionId);
+
+      const deleteParams: {
+        id: number;
+        type: "Income" | "Expense";
+        categoryId?: number;
+        transactionDate?: string;
+      } = {
         id: transactionId,
         type: transactionType
-      }).unwrap()
+      };
+
+      // Add required parameters for expense transactions
+      if (transactionType === "Expense" && transactionToDelete) {
+        deleteParams.categoryId = transactionToDelete.Category_ID;
+        deleteParams.transactionDate = transactionToDelete.Transaction_Date;
+      }
+
+      const result = await deleteTransaction(deleteParams).unwrap();
 
       if (result.success) {
-        toast.success("Transaction deleted successfully!")
-        setTransactionToDelete(null)
+        toast.success("Transaction deleted successfully!");
+        setTransactionToDelete(null);
       } else {
-        toast.error("Failed to delete transaction")
+        toast.error("Failed to delete transaction");
       }
     } catch (error: any) {
-      console.error("Error deleting transaction:", error)
-      toast.error(error?.data?.message || "Failed to delete transaction")
+      console.error("Error deleting transaction:", error);
+      toast.error(error?.data?.message || "Failed to delete transaction");
     }
-  }
-
+  };
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim() || !selectedTransactionType) {
       toast.error("Please enter a category name and select a transaction type")

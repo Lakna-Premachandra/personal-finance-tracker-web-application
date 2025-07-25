@@ -80,14 +80,17 @@ export async function POST(request: NextRequest) {
       
       // Check if transaction date is not in the future
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (parsedDate > today) {
+      const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+      const transactionDateString = parsedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      if (transactionDateString > todayString) {
         return NextResponse.json(
           { error: 'Transaction date cannot be in the future' },
           { status: 400 }
         );
       }
     }
+
 
     const transactionInput = {
       title,
