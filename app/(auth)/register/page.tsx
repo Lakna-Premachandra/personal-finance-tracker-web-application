@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRegisterUserMutation } from "@/services/controllers/authController"
-import { AlertCircle, ArrowRight, Calendar, CheckCircle, Eye, EyeOff, Lock, Mail, MapPin, Phone, UserRound } from "lucide-react"
+import { AlertCircle, ArrowRight, Calendar, CheckCircle, Eye, EyeOff, Lock, Mail, MapPin, Phone, PiggyBank, UserRound } from "lucide-react"
 import Link from "next/link"
 import type React from "react"
 import { useState } from "react"
@@ -242,8 +242,10 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl shadow-xl border-0 bg-white/90 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-            <span className="text-2xl font-bold text-white">FT</span>
+          <div className="flex w-full items-center justify-center ">
+            <div className="flex h-9 w-9 items-center justify-center  rounded-sm bg-primary shadow-lg">
+              <PiggyBank className="h-5 w-5 text-white" />
+            </div>
           </div>
           <CardTitle className="text-3xl font-bold">Create Account</CardTitle>
           <CardDescription className="text-lg">Join FinanceTracker and start managing your money</CardDescription>

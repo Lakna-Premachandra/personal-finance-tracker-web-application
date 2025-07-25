@@ -927,7 +927,7 @@ export default function YoungAdultTransactionsPage() {
         </Card>
       </div>
 
-      <div className="w-full flex justify-end">
+      <div className="w-full flex justify-end"> 
         <ExportDialog transactions={transactions} userType="young-adult" />
       </div>
 

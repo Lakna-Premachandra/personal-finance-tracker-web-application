@@ -16,13 +16,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarNav } from "@/components/sidebar-nav"
-import { Bell, Search, Menu, LogOut, User, Settings } from "lucide-react"
+import { Bell, Search, Menu, LogOut, User, Settings, PiggyBank } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { logout } from "@/store/slices/authSlice"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import Link from "next/link"
 import Router from "next/router"
-
+import Image from "next/image"
+import logo from '../public/5157fd0e-4183-4d5f-8cdd-5896e61b3f3f-removebg-preview.png'
 // Add RootState type
 interface RootState {
   auth: {
@@ -76,12 +77,13 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 items-center gap-2 border-b px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-white">FT</span>
-          </div>
+        <div className="flex h-16 items-center gap-2 border-b px-6 ">
+          {/* <img src="../public/184ed18a-1e6e-46af-8534-c192e71173cb.png" alt="" /> */}
+            <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary shadow-lg">
+                <PiggyBank className="h-5 w-5 text-white" />
+              </div>
           <div>
-            <h1 className="text-lg font-semibold">FinanceTracker</h1>
+            <h1 className="text-lg font-semibold">BudgetMate</h1>
             <p className="text-xs text-secondary-500 capitalize">{userType.replace("-", " ")} Mode</p>
           </div>
         </div>
@@ -114,7 +116,7 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
                       <div>
                         {displayName && displayName.length > 0
                           ? displayName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
-                          : "U"}
+                          : "U"}  
                       </div>
 
                     </Avatar>
