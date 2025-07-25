@@ -182,48 +182,7 @@ export default function SettingsPage() {
     
       
 
-        {/* Privacy Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Privacy & Security
-            </CardTitle>
-            <CardDescription>Control your privacy and security settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-           
-
-            <div className="space-y-4">
-              <h4 className="font-medium">Change Password</h4>
-              <div className="grid gap-4">
-                <div>
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Input id="currentPassword" type={showPassword ? "text" : "password"} className="pr-10" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input id="newPassword" type="password" />
-                </div>
-                <div>
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input id="confirmPassword" type="password" />
-                </div>
-                <Button variant="outline" className="w-fit bg-transparent">
-                  Update Password
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
 
         {/* App Preferences */}
         <Card>

@@ -133,7 +133,7 @@ export const categoryApi = api.injectEndpoints({
                     'X-User-Type': userType,
                 }
             }),
-            invalidatesTags: ['Category'],
+            invalidatesTags: ['Category','Transaction'],
         }),
         // Get categories filtered by default status
         getCategoriesByDefault: builder.query<CategoriesResponse, { isDefault: boolean; type?: 'Income' | 'Expense' }>({

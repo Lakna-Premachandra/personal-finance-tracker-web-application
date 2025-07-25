@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertCircle, PiggyBank } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLoginUserMutation } from "@/services/controllers/authController"
 import { useDispatch } from "react-redux"
@@ -122,9 +122,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 w-full">
       <Card className="w-full max-w-md shadow-xl border-0 bg-white/90 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-            <span className="text-2xl font-bold text-white">FT</span>
-          </div>
+           <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary shadow-lg">
+                <PiggyBank className="h-5 w-5 text-white" />
+              </div>
           <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
           <CardDescription className="text-lg">Sign in to your FinanceTracker account</CardDescription>
         </CardHeader>

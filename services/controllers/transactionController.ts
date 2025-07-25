@@ -92,7 +92,7 @@ export const transactionApi = api.injectEndpoints({
         // GET ALL transactions
         getTransactions: builder.query<TransactionResponse, void>({
             query: () => '/transactions',
-            providesTags: ['Transaction'],
+            providesTags: ['Transaction','Category'],
         }),
 
         // GET transactions by type

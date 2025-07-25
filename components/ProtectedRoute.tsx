@@ -5,15 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { RootState } from '@/store/store';
 import { initializeAuth } from '@/store/slices/authSlice';
+import Image from 'next/image';
+import logo from '../public/5157fd0e-4183-4d5f-8cdd-5896e61b3f3f-removebg-preview.png'
+
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedUserTypes?: ('Young-Adult' | 'Student')[];
 }
 
-export default function ProtectedRoute({ 
-  children, 
-  allowedUserTypes 
+export default function ProtectedRoute({
+  children,
+  allowedUserTypes
 }: ProtectedRouteProps) {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -52,8 +55,17 @@ export default function ProtectedRoute({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-blue-500 font-semibold text-lg">Finance Tracker...</p>
+          {/* <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div> */}
+          <div className="relative">
+            <Image
+              src={logo}
+              alt="Finance Tracker Logo"
+              height={300}
+              width={300}
+              className="animate-pulse"
+            />
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"></div>
+          </div>
         </div>
       </div>
     );
@@ -63,9 +75,18 @@ export default function ProtectedRoute({
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-          <p className="mt-4 text-blue-500">Redirecting to login...</p>
+       <div className="text-center">
+          {/* <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div> */}
+          <div className="relative">
+            <Image
+              src={logo}
+              alt="Finance Tracker Logo"
+              height={300}
+              width={300}
+              className="animate-pulse"
+            />
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"></div>
+          </div>
         </div>
       </div>
     );
