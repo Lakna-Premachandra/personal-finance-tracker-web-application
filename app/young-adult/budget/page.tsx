@@ -69,6 +69,7 @@ import {
   Cell,
   Legend
 } from "recharts"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function YoungAdultBudgetPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("monthly")
@@ -78,6 +79,8 @@ export default function YoungAdultBudgetPage() {
   const [editingBudget, setEditingBudget] = useState<BudgetData | null>(null)
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+    const { formatCurrency, getCurrencySymbol } = useCurrency();
+  
 
   // Form state for adding/editing budget
   const [budgetForm, setBudgetForm] = useState({
@@ -386,7 +389,7 @@ export default function YoungAdultBudgetPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="amount">Amount (LKR)</Label>
+                  <Label htmlFor="amount">Amount ({getCurrencySymbol()})</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -496,7 +499,7 @@ export default function YoungAdultBudgetPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="edit-amount">Amount (LKR)</Label>
+                  <Label htmlFor="edit-amount">Amount ({getCurrencySymbol()})</Label>
                   <Input
                     id="edit-amount"
                     type="number"
@@ -597,7 +600,7 @@ export default function YoungAdultBudgetPage() {
                   Loading...
                 </div>
               ) : (
-                `LKR ${currentBudget.total.toLocaleString()}`
+                `${getCurrencySymbol()} ${currentBudget.total.toLocaleString()}`
               )}
             </div>
             <p className="text-xs text-blue-600 capitalize">{selectedPeriod} allocation</p>
@@ -617,7 +620,7 @@ export default function YoungAdultBudgetPage() {
                   Loading...
                 </div>
               ) : (
-                `LKR ${currentBudget.spent.toLocaleString()}`
+                `${getCurrencySymbol()} ${currentBudget.spent.toLocaleString()}`
               )}
             </div>
             <p className="text-xs text-yellow-600">
@@ -633,7 +636,7 @@ export default function YoungAdultBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              LKR {remainingBudget.toLocaleString()}
+              {getCurrencySymbol()} {remainingBudget.toLocaleString()}
             </div>
             <p className="text-xs text-green-600">Available balance</p>
           </CardContent>
@@ -652,7 +655,7 @@ export default function YoungAdultBudgetPage() {
                   Loading...
                 </div>
               ) : (
-                `LKR ${currentBudget.income.toLocaleString()}`
+                `${getCurrencySymbol()} ${currentBudget.income.toLocaleString()}`
               )}
             </div>
             <p className="text-xs text-gray-600 capitalize">{selectedPeriod} income</p>
@@ -768,7 +771,7 @@ export default function YoungAdultBudgetPage() {
                         <Progress value={Math.min(category.percentageUsed, 100)} className="h-2 bg-slate-200 border" />
                         <div className="flex justify-between text-xs ">
                           <span>{Math.round(category.percentageUsed)}% used</span>
-                          <span>LKR {Math.max(0, category.remainingBudget).toLocaleString()} remaining</span>
+                          <span>{getCurrencySymbol()} {Math.max(0, category.remainingBudget).toLocaleString()} remaining</span>
                         </div>
                       </div>
                     </CardContent>
@@ -821,7 +824,7 @@ export default function YoungAdultBudgetPage() {
                       />
                       <Tooltip
                         formatter={(value, name) => [
-                          `LKR ${Number(value).toLocaleString()}`,
+                          `${getCurrencySymbol()} ${Number(value).toLocaleString()}`,
                           name === 'budgeted' ? 'Budgeted' : name === 'spent' ? 'Spent' : 'Remaining'
                         ]}
                         labelFormatter={(label) => `Category: ${label}`}
@@ -875,7 +878,7 @@ export default function YoungAdultBudgetPage() {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value) => [`LKR ${Number(value).toLocaleString()}`, 'Budget Amount']}
+                        formatter={(value) => [`${getCurrencySymbol()} ${Number(value).toLocaleString()}`, 'Budget Amount']}
                       />
                       <Legend
                         verticalAlign="bottom"

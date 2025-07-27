@@ -18,8 +18,12 @@ import {
   BookOpen,
   Award,
 } from "lucide-react"
+import CronInitializer from "@/components/CronInitializer"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function StudentDashboard() {
+    const { formatCurrency, getCurrencySymbol } = useCurrency();
+  
   const stats = [
     {
       title: "Total Balance",
@@ -86,6 +90,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6">
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -109,13 +114,12 @@ export default function StudentDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
               <p
-                className={`text-xs flex items-center gap-1 ${
-                  stat.changeType === "positive"
+                className={`text-xs flex items-center gap-1 ${stat.changeType === "positive"
                     ? "text-green-600"
                     : stat.changeType === "negative"
                       ? "text-red-600"
                       : "text-muted-foreground"
-                }`}
+                  }`}
               >
                 {stat.changeType === "positive" && <ArrowUpRight className="h-3 w-3" />}
                 {stat.changeType === "negative" && <ArrowDownRight className="h-3 w-3" />}
@@ -141,9 +145,8 @@ export default function StudentDashboard() {
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`p-2 rounded-full ${
-                        transaction.type === "income" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                      }`}
+                      className={`p-2 rounded-full ${transaction.type === "income" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                        }`}
                     >
                       {transaction.type === "income" ? (
                         <ArrowUpRight className="h-4 w-4" />
@@ -157,7 +160,7 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                   <div className={`font-semibold ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                    {transaction.type === "income" ? "+" : ""}LKR {Math.abs(transaction.amount).toLocaleString()}
+                    {transaction.type === "income" ? "+" : ""}{getCurrencySymbol()} {Math.abs(transaction.amount).toLocaleString()}
                   </div>
                 </div>
               ))}
@@ -179,7 +182,7 @@ export default function StudentDashboard() {
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span>Saved</span>
-                    <span>LKR 34,000 / LKR 50,000</span>
+                    <span>{getCurrencySymbol()} 34,000 / {getCurrencySymbol()} 50,000</span>
                   </div>
                   <Progress value={68} className="h-3" />
                 </div>
@@ -238,7 +241,7 @@ export default function StudentDashboard() {
               <p className="text-sm text-muted-foreground">
                 Total Expenses:{" "}
                 <span className="font-semibold text-red-600">
-                  LKR {expenseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                  {getCurrencySymbol()}{expenseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                 </span>
               </p>
             </div>
@@ -256,7 +259,7 @@ export default function StudentDashboard() {
               <p className="text-sm text-muted-foreground">
                 Total Income:{" "}
                 <span className="font-semibold text-green-600">
-                  LKR {incomeData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                  {getCurrencySymbol()}{incomeData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                 </span>
               </p>
             </div>
@@ -274,7 +277,7 @@ export default function StudentDashboard() {
               <p className="text-sm text-muted-foreground">
                 This Week:{" "}
                 <span className="font-semibold text-blue-600">
-                  LKR {weeklySpendingData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                  {getCurrencySymbol()}{weeklySpendingData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                 </span>
               </p>
             </div>

@@ -8,11 +8,11 @@ const baseQueryWithAuth = fetchBaseQuery({
     const token = sessionStorage.getItem('token')
     // Alternative: get from Redux state
     // const token = (getState() as RootState).auth.token
-    
+
     if (token) {
       headers.set('Authorization', `Bearer ${token}`)
     }
-    
+
     return headers
   },
 })
@@ -20,6 +20,6 @@ const baseQueryWithAuth = fetchBaseQuery({
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithAuth,
-  tagTypes: ['User', 'Transaction', 'Budget', 'Category', 'MonthlySummary'], // Add more as needed
+  tagTypes: ['User', 'Transaction', 'Budget', 'Category', 'MonthlySummary', 'Profile', 'CronStatus', 'ManualCheck', 'CronLogs', 'NotificationStats', 'UnprocessedNotifications', 'Notifications', 'UserNotifications', 'UserProfile','CronCheck','CronSchedule'], // Add more as needed
   endpoints: () => ({}),
 })

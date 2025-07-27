@@ -7,6 +7,7 @@ import { RootState } from '@/store/store';
 import { initializeAuth } from '@/store/slices/authSlice';
 import Image from 'next/image';
 import logo from '../public/5157fd0e-4183-4d5f-8cdd-5896e61b3f3f-removebg-preview.png'
+import { PiggyBank, UserRoundX } from 'lucide-react';
 
 
 interface ProtectedRouteProps {
@@ -57,14 +58,10 @@ export default function ProtectedRoute({
         <div className="text-center">
           {/* <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div> */}
           <div className="relative">
-            <Image
-              src={logo}
-              alt="Finance Tracker Logo"
-              height={300}
-              width={300}
-              className="animate-pulse"
-            />
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"></div>
+            <div className="flex h-[200px] w-[200px] items-center justify-center rounded-full bg-primary shadow-lg ">
+              <PiggyBank className="h-[100px] w-[100px] text-white" />
+            </div>
+            <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-200 animate-spin"></div>
           </div>
         </div>
       </div>
@@ -75,17 +72,13 @@ export default function ProtectedRoute({
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-       <div className="text-center">
+        <div className="text-center">
           {/* <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div> */}
           <div className="relative">
-            <Image
-              src={logo}
-              alt="Finance Tracker Logo"
-              height={300}
-              width={300}
-              className="animate-pulse"
-            />
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"></div>
+            <div className="flex h-[200px] w-[200px] items-center justify-center rounded-full bg-primary shadow-lg">
+              <PiggyBank className="h-[100px] w-[100px] text-white" />
+            </div>
+            <div className=" m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-200 animate-spin"></div>
           </div>
         </div>
       </div>
@@ -97,7 +90,9 @@ export default function ProtectedRoute({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p>Unauthorized access</p>
+          <div className="flex h-[200px] w-[200px] items-center justify-center rounded-full bg-primary shadow-lg">
+            <UserRoundX className="h-[100px] w-[100px] text-white" />
+          </div>
         </div>
       </div>
     );

@@ -10,6 +10,7 @@ export interface User {
   Type: 'Young-Adult' | 'Student';
   Created_Date: Date;
   Updated_Date: Date;
+  ProfilePicture?: string | null;
 }
 
 export interface StudentDetails {
@@ -36,7 +37,7 @@ export interface RegisterRequest {
   address?: string;
   age?: number;
   phoneNo?: string;
-  type: 'Young-Adult' | 'Student';
+  type: 'Young-Adult' | 'Student' ;
   guardianContactNo?: string;
   employmentStatus?: string;
 }
@@ -54,5 +55,6 @@ export interface LoginResponse {
     username: string;
     email: string;
     type: 'Young-Adult' | 'Student';
+    profilePicture?: string | null;
   };
 }

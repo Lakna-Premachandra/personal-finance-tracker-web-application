@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MoneyJarVisual } from "@/components/money-jar-visual"
 import { PiggyBank, Plus, Trophy, Sparkles, Target, History, AlertCircle } from "lucide-react"
+import { useCurrency } from "@/hooks/useCurrency"
 
 interface Jar {
   id: number
@@ -25,6 +26,8 @@ interface ValidationErrors {
 }
 
 export default function MoneyJarPage() {
+        const { formatCurrency, getCurrencySymbol } = useCurrency();
+  
   const [currentJar, setCurrentJar] = useState<Jar>({
     id: 1,
     level: 1,
@@ -55,7 +58,7 @@ export default function MoneyJarPage() {
     const numAmount = Number.parseFloat(amount)
     if (isNaN(numAmount)) return "Please enter a valid number"
     if (numAmount <= 0) return "Amount must be greater than 0"
-    if (numAmount > 10000) return "Maximum amount per transaction is LKR 10,000"
+    if (numAmount > 10000) return "Maximum amount per transaction is {getCurrencySymbol()} 10,000"
     return undefined
   }
 
@@ -160,12 +163,12 @@ export default function MoneyJarPage() {
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Current: LKR {currentJar.currentAmount.toLocaleString()}</span>
-                <span>Target: LKR {currentJar.targetAmount.toLocaleString()}</span>
+                <span>Current: {getCurrencySymbol()} {currentJar.currentAmount.toLocaleString()}</span>
+                <span>Target: {getCurrencySymbol()} {currentJar.targetAmount.toLocaleString()}</span>
               </div>
               <Progress value={progressPercentage} className="h-3" />
               <p className="text-sm text-secondary-600">
-                LKR {remainingAmount.toLocaleString()} remaining to complete this jar
+                {getCurrencySymbol()} {remainingAmount.toLocaleString()} remaining to complete this jar
               </p>
             </div>
           </div>
@@ -186,13 +189,13 @@ export default function MoneyJarPage() {
               <Label className="text-sm font-medium">Quick Add</Label>
               <div className="flex gap-2 mt-2">
                 <Button variant="outline" size="sm" onClick={() => handleQuickAdd(100)} className="flex-1">
-                  LKR 100
+                  {getCurrencySymbol()} 100
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleQuickAdd(250)} className="flex-1">
-                  LKR 250
+                  {getCurrencySymbol()} 250
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleQuickAdd(500)} className="flex-1">
-                  LKR 500
+                  {getCurrencySymbol()} 500
                 </Button>
               </div>
             </div>
@@ -203,7 +206,7 @@ export default function MoneyJarPage() {
               <Input
                 id="amount"
                 type="number"
-                placeholder="Enter amount (LKR)"
+                placeholder="Enter amount "
                 value={addAmount}
                 onChange={(e) => {
                   setAddAmount(e.target.value)
@@ -247,7 +250,7 @@ export default function MoneyJarPage() {
                 <span className="font-medium text-sm">Next Level Preview</span>
               </div>
               <p className="text-sm text-blue-600">
-                Level {currentJar.level + 1}: LKR {((currentJar.level + 1) * 5000).toLocaleString()} target
+                Level {currentJar.level + 1}: {getCurrencySymbol()} {((currentJar.level + 1) * 5000).toLocaleString()} target
               </p>
             </div>
           </CardContent>
@@ -283,7 +286,7 @@ export default function MoneyJarPage() {
                     <div>
                       <p className="font-medium">Level {jar.level} Jar Completed</p>
                       <p className="text-sm text-secondary-600">
-                        LKR {jar.currentAmount.toLocaleString()} saved
+                        {getCurrencySymbol()} {jar.currentAmount.toLocaleString()} saved
                         {jar.daysToComplete && ` in ${jar.daysToComplete} days`}
                       </p>
                     </div>

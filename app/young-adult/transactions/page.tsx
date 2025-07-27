@@ -50,6 +50,7 @@ import { toast } from "sonner"
 import { Category, useAddCategoryMutation, useDeleteCategoryMutation, useGetCategoriesByTypeQuery, useUpdateCategoryMutation } from "@/services/controllers/categoryController"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useGetTransactionsQuery, useCreateTransactionMutation, useUpdateTransactionMutation, useDeleteTransactionMutation, Transaction } from "@/services/controllers/transactionController"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function YoungAdultTransactionsPage() {
   const [date, setDate] = useState<Date>()
@@ -67,7 +68,7 @@ export default function YoungAdultTransactionsPage() {
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [showValidation, setShowValidation] = useState(false)
-
+const { formatCurrency, getCurrencySymbol } = useCurrency();
   // Form state
   const [formData, setFormData] = useState({
     title: "",
@@ -496,7 +497,7 @@ export default function YoungAdultTransactionsPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="amount">Amount (LKR)</Label>
+                  <Label htmlFor="amount">Amount ({getCurrencySymbol()})</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -754,7 +755,7 @@ export default function YoungAdultTransactionsPage() {
               )}
             </div>
             <div>
-              <Label htmlFor="edit-amount">Amount (LKR)</Label>
+              <Label htmlFor="edit-amount">Amount   ({getCurrencySymbol()})</Label>
               <Input
                 id="edit-amount"
                 type="number"
@@ -899,7 +900,7 @@ export default function YoungAdultTransactionsPage() {
             <ArrowUpRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">LKR {totalIncome.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-700">({getCurrencySymbol()}) {totalIncome.toLocaleString()}</div>
             <p className="text-xs text-green-600">All time</p>
           </CardContent>
         </Card>
@@ -910,7 +911,7 @@ export default function YoungAdultTransactionsPage() {
             <ArrowDownRight className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-700">LKR {totalExpenses.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-700">({getCurrencySymbol()}) {totalExpenses.toLocaleString()}</div>
             <p className="text-xs text-red-600">All time</p>
           </CardContent>
         </Card>
@@ -921,7 +922,7 @@ export default function YoungAdultTransactionsPage() {
             <CalendarIcon className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700">LKR {(totalIncome - totalExpenses).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-blue-700">({getCurrencySymbol()}) {(totalIncome - totalExpenses).toLocaleString()}</div>
             <p className="text-xs text-blue-600">All time</p>
           </CardContent>
         </Card>

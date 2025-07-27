@@ -34,8 +34,11 @@ import {
   Car,
 } from "lucide-react"
 import { format } from "date-fns"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function PaymentRemindersPage() {
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
+
   const [date, setDate] = useState<Date>()
   const [newReminder, setNewReminder] = useState({
     title: "",
@@ -162,7 +165,7 @@ export default function PaymentRemindersPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Label htmlFor="amount">Amount {getCurrencySymbol()}</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -298,7 +301,7 @@ export default function PaymentRemindersPage() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">${totalMonthlyPayments}</div>
+            <div className="text-2xl font-bold text-green-700">{getCurrencySymbol()}{totalMonthlyPayments}</div>
             <p className="text-xs text-green-600">Per month</p>
           </CardContent>
         </Card>
@@ -335,7 +338,7 @@ export default function PaymentRemindersPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      <div className="font-semibold">${reminder.amount}</div>
+                      <div className="font-semibold">{getCurrencySymbol()}{reminder.amount}</div>
                       <Badge className={getStatusColor(reminder.status)}>Overdue</Badge>
                     </div>
                     <Button size="sm" className="bg-green-500 hover:bg-green-600">
@@ -361,9 +364,8 @@ export default function PaymentRemindersPage() {
             {reminders.map((reminder) => (
               <div
                 key={reminder.id}
-                className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                  reminder.isActive ? "hover:bg-gray-50" : "opacity-60 bg-gray-50"
-                }`}
+                className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${reminder.isActive ? "hover:bg-gray-50" : "opacity-60 bg-gray-50"
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-lg bg-gradient-to-r ${reminder.color} text-white`}>
@@ -388,7 +390,7 @@ export default function PaymentRemindersPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-lg font-bold">${reminder.amount}</div>
+                    <div className="text-lg font-bold">{getCurrencySymbol()}{reminder.amount}</div>
                     <div className="text-sm text-muted-foreground">
                       {getDaysUntilDue(reminder.dueDate) > 0
                         ? `${getDaysUntilDue(reminder.dueDate)} days left`
