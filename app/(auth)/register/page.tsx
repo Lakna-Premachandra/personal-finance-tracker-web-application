@@ -10,6 +10,7 @@ import { AlertCircle, ArrowRight, Calendar, CheckCircle, Eye, EyeOff, Lock, Mail
 import Link from "next/link"
 import type React from "react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 interface ValidationErrors {
   employmentStatus?: string
@@ -21,7 +22,6 @@ interface ValidationErrors {
   confirmPassword?: string
   phoneNo?: string
   address?: string
-  general?: string
 }
 
 const employmentStatusOptions = [
@@ -37,7 +37,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
-  const [showSuccess, setShowSuccess] = useState(false)
   const [formData, setFormData] = useState({
     employmentStatus: "",
     guardianContactNo: "",
@@ -65,6 +64,7 @@ export default function RegisterPage() {
     const age = calculateAge(dateOfBirth)
     if (age >= 12 && age <= 17) return "Student"
     if (age >= 18 && age <= 25) return "Young-Adult"
+   
     return null
   }
 
@@ -171,9 +171,12 @@ export default function RegisterPage() {
       console.log("Sending registration payload:", payload)
 
       // Make API call
-      setShowSuccess(true)
       const response = await registerUser(payload).unwrap()
 
+      // Show success toast
+      toast.success("Registration Successful!", {
+        description: "Your account has been created successfully. You can now sign in.",
+      })
 
       // Clear form data after successful registration
       setFormData({
@@ -192,29 +195,29 @@ export default function RegisterPage() {
       // setTimeout(() => {
       //   router.push('/login')
       // }, 2000)
-      setTimeout(() => {
-        setShowSuccess(false)
-      }, 5000)
-
 
     } catch (error: any) {
-      setShowSuccess(false)
-
       // Handle different types of errors
+      let errorMessage = "Registration failed. Please try again later."
+      
       if (error?.data?.message) {
-        setErrors({ general: error.data.message })
+        errorMessage = error.data.message
       } else if (error?.data?.errors) {
         // Handle validation errors from backend
         if (Array.isArray(error.data.errors)) {
-          setErrors({ general: error.data.errors.join(", ") })
+          errorMessage = error.data.errors.join(", ")
         } else {
           setErrors(error.data.errors)
+          errorMessage = "Please check the form for errors."
         }
       } else if (error?.message) {
-        setErrors({ general: error.message })
-      } else {
-        setErrors({ general: "Registration failed. Please try again later." })
+        errorMessage = error.message
       }
+
+      // Show error toast
+      toast.error("Registration Failed", {
+        description: errorMessage,
+      })
     }
   }
 
@@ -252,22 +255,6 @@ export default function RegisterPage() {
         </CardHeader>
 
         <CardContent className="px-8 pb-8">
-          {errors.general && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <span>{errors.general}</span>
-            </div>
-          )}
-          {showSuccess && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-700">
-              <CheckCircle className="h-5 w-5 flex-shrink-0" />
-              <div>
-                <p className="font-medium">Registration Successful!</p>
-                <p className="text-sm">Your account has been created successfully. You can now sign in.</p>
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Row 1: Username and Email */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

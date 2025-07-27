@@ -36,9 +36,11 @@ import {
   Heart,
 } from "lucide-react"
 import { format } from "date-fns"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function PaymentRemindersPage() {
   const [date, setDate] = useState<Date>()
+  const { formatCurrency, getCurrencySymbol } = useCurrency()
   const [newReminder, setNewReminder] = useState({
     title: "",
     amount: "",
@@ -190,7 +192,7 @@ export default function PaymentRemindersPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Label htmlFor="amount">Amount ({getCurrencySymbol()})</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -328,7 +330,7 @@ export default function PaymentRemindersPage() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">${totalMonthlyPayments.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-700">{getCurrencySymbol()} {totalMonthlyPayments.toLocaleString()}</div>
             <p className="text-xs text-green-600">Per month</p>
           </CardContent>
         </Card>
@@ -368,7 +370,7 @@ export default function PaymentRemindersPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <div className="text-xl font-bold text-red-600">${reminder.amount}</div>
+                      <div className="text-xl font-bold text-red-600">{getCurrencySymbol()} {reminder.amount}</div>
                       <Badge className={getStatusColor(reminder.status)}>Overdue</Badge>
                     </div>
                     <Button size="sm" className="bg-green-500 hover:bg-green-600">
@@ -421,7 +423,7 @@ export default function PaymentRemindersPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-lg font-bold">${reminder.amount.toLocaleString()}</div>
+                    <div className="text-lg font-bold">{getCurrencySymbol()} {reminder.amount.toLocaleString()}</div>
                     <div className="text-sm text-muted-foreground">
                       {getDaysUntilDue(reminder.dueDate) > 0
                         ? `${getDaysUntilDue(reminder.dueDate)} days left`

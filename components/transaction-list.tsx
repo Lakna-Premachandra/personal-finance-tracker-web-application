@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, ArrowDownRight, Search, Filter, Edit, Trash2, Calendar, Edit2 } from "lucide-react"
 import { Transaction } from "@/services/controllers/transactionController"
+import { useCurrency } from "@/hooks/useCurrency"
 
 // Mock Transaction interface - replace with your actual interface
 
@@ -24,6 +25,8 @@ export function TransactionList({ transactions, userType, onEditTransaction, onD
   const [filterType, setFilterType] = useState("all")
   const [filterCategory, setFilterCategory] = useState("all")
   const [sortBy, setSortBy] = useState("date-desc")
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
+  
 
   const categories =
     userType === "student"
@@ -166,7 +169,7 @@ const formatMonthYear = (monthKey: string) => {
                               <ArrowUpRight className="h-4 w-4 text-green-600" />
                               <div>
                                 <p className="text-xs text-green-600 font-medium">Income</p>
-                                <p className="font-bold text-green-700">LKR {income.toLocaleString()}</p>
+                                <p className="font-bold text-green-700">{getCurrencySymbol()} {income.toLocaleString()}</p>
                               </div>
                             </div>
                           )}
@@ -175,7 +178,7 @@ const formatMonthYear = (monthKey: string) => {
                               <ArrowDownRight className="h-4 w-4 text-red-600" />
                               <div>
                                 <p className="text-xs text-red-600 font-medium">Expenses</p>
-                                <p className="font-bold text-red-700">LKR {expenses.toLocaleString()}</p>
+                                <p className="font-bold text-red-700">{getCurrencySymbol()} {expenses.toLocaleString()}</p>
                               </div>
                             </div>
                           )}
@@ -189,7 +192,7 @@ const formatMonthYear = (monthKey: string) => {
                           >
                             <p className="text-xs font-medium opacity-75">Net Balance</p>
                             <p className="text-lg">
-                              {balance > 0 ? "+" : ""}LKR {balance.toLocaleString()}
+                              {balance > 0 ? "+" : ""}{getCurrencySymbol()} {balance.toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -238,7 +241,7 @@ const formatMonthYear = (monthKey: string) => {
                               className={`text-lg font-bold ${transaction.Type === "Income" ? "text-green-600" : "text-red-600"
                                 }`}
                             >
-                              {transaction.Type === "Income" ? "+" : "-"}LKR{" "}
+                              {transaction.Type === "Income" ? "+" : "-"}{getCurrencySymbol()}{" "}
                               {Math.abs(transaction.Amount).toLocaleString()}
                             </div>
                             <div className="flex items-center gap-2">

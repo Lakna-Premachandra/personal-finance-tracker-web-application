@@ -20,8 +20,11 @@ import {
   Activity,
   Briefcase,
 } from "lucide-react"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function YoungAdultDashboard() {
+      const { formatCurrency, getCurrencySymbol } = useCurrency();
+  
   const stats = [
     {
       title: "Total Balance",
@@ -167,7 +170,7 @@ export default function YoungAdultDashboard() {
                     </div>
                   </div>
                   <div className={`font-semibold ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                    {transaction.type === "income" ? "+" : ""}LKR {Math.abs(transaction.amount).toLocaleString()}
+                    {transaction.type === "income" ? "+" : ""}{getCurrencySymbol()} {Math.abs(transaction.amount).toLocaleString()}
                   </div>
                 </div>
               ))}
@@ -203,7 +206,7 @@ export default function YoungAdultDashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-green-800">Total Value</span>
-                  <span className="font-semibold text-green-800">LKR 2,200,000</span>
+                  <span className="font-semibold text-green-800">{getCurrencySymbol()} 2,200,000</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-green-800">Monthly Return</span>
@@ -241,7 +244,7 @@ export default function YoungAdultDashboard() {
             <AdvancedPieChart
               data={expenseData}
               centerText={{
-                value: `LKR ${expenseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}`,
+                value: `${getCurrencySymbol()} ${expenseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}`,
                 label: "Total Expenses",
               }}
             />
@@ -260,7 +263,7 @@ export default function YoungAdultDashboard() {
             <AdvancedPieChart
               data={investmentData}
               centerText={{
-                value: `LKR ${investmentData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}`,
+                value: `${getCurrencySymbol()} ${investmentData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}`,
                 label: "Total Portfolio",
               }}
             />
@@ -293,7 +296,7 @@ export default function YoungAdultDashboard() {
               <p className="text-sm text-muted-foreground">
                 Total:{" "}
                 <span className="font-semibold text-blue-600">
-                  LKR {categoryComparisonData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                  {getCurrencySymbol()} {categoryComparisonData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                 </span>
               </p>
             </div>

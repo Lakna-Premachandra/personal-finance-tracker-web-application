@@ -17,8 +17,11 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Target, Calendar, DollarSign, TrendingUp, Edit, Trash2, CheckCircle } from "lucide-react"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function GoalsPage() {
+      const { formatCurrency, getCurrencySymbol } = useCurrency();
+
   const [newGoal, setNewGoal] = useState({
     title: "",
     targetAmount: "",
@@ -91,6 +94,7 @@ export default function GoalsPage() {
   const completedGoals = goals.filter((goal) => goal.status === "completed")
   const totalTargetAmount = activeGoals.reduce((sum, goal) => sum + goal.targetAmount, 0)
   const totalCurrentAmount = activeGoals.reduce((sum, goal) => sum + goal.currentAmount, 0)
+  
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -143,7 +147,7 @@ export default function GoalsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="targetAmount">Target Amount (LKR)</Label>
+                <Label htmlFor="targetAmount">Target Amount {getCurrencySymbol()}</Label>
                 <Input
                   id="targetAmount"
                   type="number"
@@ -153,7 +157,7 @@ export default function GoalsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="currentAmount">Current Amount (LKR)</Label>
+                <Label htmlFor="currentAmount">Current Amount {getCurrencySymbol()}</Label>
                 <Input
                   id="currentAmount"
                   type="number"
@@ -205,7 +209,7 @@ export default function GoalsPage() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">LKR {totalCurrentAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-700">{getCurrencySymbol()} {totalCurrentAmount.toLocaleString()}</div>
             <p className="text-xs text-green-600">Across all goals</p>
           </CardContent>
         </Card>
@@ -216,7 +220,7 @@ export default function GoalsPage() {
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-700">LKR {totalTargetAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-purple-700">{getCurrencySymbol()} {totalTargetAmount.toLocaleString()}</div>
             <p className="text-xs text-purple-600">Total target</p>
           </CardContent>
         </Card>
@@ -278,7 +282,7 @@ export default function GoalsPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="targetAmount">Target Amount (LKR)</Label>
+                        <Label htmlFor="targetAmount">Target Amount {getCurrencySymbol()}</Label>
                         <Input
                           id="targetAmount"
                           type="number"
@@ -288,7 +292,7 @@ export default function GoalsPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="currentAmount">Current Amount (LKR)</Label>
+                        <Label htmlFor="currentAmount">Current Amount {getCurrencySymbol()}</Label>
                         <Input
                           id="currentAmount"
                           type="number"
@@ -350,7 +354,7 @@ export default function GoalsPage() {
                       <div className="flex justify-between text-sm mb-2">
                         <span>Progress</span>
                         <span>
-                          LKR {goal.currentAmount.toLocaleString()} / LKR {goal.targetAmount.toLocaleString()}
+                          {getCurrencySymbol()} {goal.currentAmount.toLocaleString()} / {getCurrencySymbol()} {goal.targetAmount.toLocaleString()}
                         </span>
                       </div>
                       <Progress value={(goal.currentAmount / goal.targetAmount) * 100} className="h-3" />
@@ -365,7 +369,7 @@ export default function GoalsPage() {
                         <span>{getDaysLeft(goal.deadline)} days left</span>
                       </div>
                       <div className="text-muted-foreground">
-                        LKR {(goal.targetAmount - goal.currentAmount).toLocaleString()} remaining
+                        {getCurrencySymbol()} {(goal.targetAmount - goal.currentAmount).toLocaleString()} remaining
                       </div>
                     </div>
 
@@ -411,7 +415,7 @@ export default function GoalsPage() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="text-lg font-semibold text-green-700">
-                      Goal Achieved: LKR {goal.targetAmount.toLocaleString()}
+                      Goal Achieved: {getCurrencySymbol()} {goal.targetAmount.toLocaleString()}
                     </div>
                     <p className="text-sm text-green-600">
                       Completed on {new Date(goal.completedDate || "").toLocaleDateString()}

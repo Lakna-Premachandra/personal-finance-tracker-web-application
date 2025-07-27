@@ -67,6 +67,7 @@ export class AuthService {
         username: user.Username,
         email: user.Email,
         type: user.Type,
+        profilePicture: user.ProfilePicture || null,
       },
     };
   }

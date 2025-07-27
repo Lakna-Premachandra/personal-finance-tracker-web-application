@@ -8,6 +8,7 @@ interface AuthState {
     username: string
     email: string
     type: 'Young-Adult' | 'Student'
+    profilePicture?: string | null 
   } | null
   isAuthenticated: boolean
   isInitialized: boolean
@@ -32,13 +33,14 @@ const authSlice = createSlice({
         username: string
         email: string
         type: 'Young-Adult' | 'Student'
+        profilePicture?: string | null
       }
     }>) => {
       state.token = action.payload.token
       state.user = action.payload.user
       state.isAuthenticated = true
       state.isInitialized = true
-      
+
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('token', action.payload.token)
         sessionStorage.setItem('user', JSON.stringify(action.payload.user))
@@ -49,7 +51,7 @@ const authSlice = createSlice({
       state.user = null
       state.isAuthenticated = false
       state.isInitialized = true
-      
+
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('token')
         sessionStorage.removeItem('user')
@@ -59,7 +61,7 @@ const authSlice = createSlice({
       if (typeof window !== 'undefined') {
         const token = sessionStorage.getItem('token')
         const user = sessionStorage.getItem('user')
-        
+
         if (token && user) {
           try {
             state.token = token
@@ -73,8 +75,33 @@ const authSlice = createSlice({
       }
       state.isInitialized = true
     },
+    updateProfilePicture: (state, action: PayloadAction<string | null>) => {
+      if (state.user) {
+        state.user.profilePicture = action.payload
+        
+        // Update sessionStorage to persist the change
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('user', JSON.stringify(state.user))
+        }
+      }
+    },
+    // Add a more comprehensive user update action
+    updateUser: (state, action: PayloadAction<Partial<{
+      username: string
+      email: string
+      profilePicture: string | null
+    }>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload }
+        
+        // Update sessionStorage to persist all changes
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('user', JSON.stringify(state.user))
+        }
+      }
+    },
   },
 })
 
-export const { loginSuccess, logout, initializeAuth } = authSlice.actions
+export const { loginSuccess, logout, initializeAuth, updateProfilePicture, updateUser } = authSlice.actions
 export default authSlice.reducer

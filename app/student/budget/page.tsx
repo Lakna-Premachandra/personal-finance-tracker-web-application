@@ -57,6 +57,7 @@ import {
   Trash2
 } from "lucide-react"
 import { toast } from "sonner"
+import { useCurrency } from "@/hooks/useCurrency"
 
 export default function StudentBudgetPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
@@ -64,6 +65,8 @@ export default function StudentBudgetPage() {
   const [isAddBudgetOpen, setIsAddBudgetOpen] = useState(false)
   const [isEditBudgetOpen, setIsEditBudgetOpen] = useState(false)
   const [editingBudget, setEditingBudget] = useState<BudgetData | null>(null)
+    const { formatCurrency, getCurrencySymbol } = useCurrency();
+  
 
   const currentDate = new Date()
   const currentMonth = currentDate.getMonth() + 1
@@ -347,7 +350,7 @@ export default function StudentBudgetPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="amount">Amount (LKR)</Label>
+                  <Label htmlFor="amount">Amount {getCurrencySymbol()} *</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -459,7 +462,7 @@ export default function StudentBudgetPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="edit-amount">Amount (LKR)</Label>
+                  <Label htmlFor="edit-amount">Amount {getCurrencySymbol()}</Label>
                   <Input
                     id="edit-amount"
                     type="number"
@@ -560,7 +563,7 @@ export default function StudentBudgetPage() {
                   Loading...
                 </div>
               ) : (
-                `LKR ${budgetData.total.toLocaleString()}`
+                `${getCurrencySymbol()} ${budgetData.total.toLocaleString()}`
               )}
             </div>
             <p className="text-xs text-blue-600">Total allocated</p>
@@ -580,7 +583,7 @@ export default function StudentBudgetPage() {
                   Loading...
                 </div>
               ) : (
-                `LKR ${budgetData.spent.toLocaleString()}`
+                `${getCurrencySymbol()} ${budgetData.spent.toLocaleString()}`
               )}
             </div>
             <p className="text-xs text-yellow-600">
@@ -596,7 +599,7 @@ export default function StudentBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              LKR {Math.max(0, remainingBudget).toLocaleString()}
+              {getCurrencySymbol()} {Math.max(0, remainingBudget).toLocaleString()}
             </div>
             <p className="text-xs text-green-600">Available to spend</p>
           </CardContent>
@@ -635,7 +638,7 @@ export default function StudentBudgetPage() {
                           <div>
                             <h3 className="font-semibold">{category.CategoryName}</h3>
                             <p className="text-sm text-gray-600">
-                              LKR {category.Spent_Amount.toLocaleString()} / LKR {category.Amount.toLocaleString()}
+                              {getCurrencySymbol()} {category.Spent_Amount.toLocaleString()} / {getCurrencySymbol()} {category.Amount.toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -714,7 +717,7 @@ export default function StudentBudgetPage() {
                         <Progress value={Math.min(category.percentageUsed, 100)} className="h-2 bg-slate-200 border" />
                         <div className="flex justify-between text-xs text-gray-600">
                           <span>{Math.round(category.percentageUsed)}% used</span>
-                          <span>LKR {Math.max(0, category.remainingBudget).toLocaleString()} left</span>
+                          <span>{getCurrencySymbol()} {Math.max(0, category.remainingBudget).toLocaleString()} left</span>
                         </div>
                       </div>
 
