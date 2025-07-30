@@ -40,6 +40,19 @@ export interface TransactionWithBudgetInfo extends TransactionResponse {
   };
 }
 
+export interface TransactionSummary {
+  Total_Income: number;
+  Total_Expenses: number;
+  Total_Goal_Allocations: number;
+  Net_Balance: number;
+}
+
+
+export interface TransactionWithSummary {
+  summary: TransactionSummary;
+  transactions: Transaction[];
+}
+
 export class TransactionService {
   // Helper method to parse transaction date
   private static parseTransactionDate(dateInput?: Date | string): Date | null {
@@ -54,15 +67,31 @@ export class TransactionService {
   }
 
   // Get all transactions (Income + Expense)
-  static async getAllTransactions(userId: number, type?: 'Income' | 'Expense'): Promise<Transaction[]> {
+  static async getAllTransactions(
+    userId: number,
+    type?: 'Income' | 'Expense'
+  ): Promise<TransactionWithSummary> {
     try {
       const pool = await connectToDatabase();
       const result = await pool.request()
         .input('UserID', sql.Int, userId)
         .input('Type', sql.VarChar(20), type || null)
         .execute('GetAllTransactions');
-      
-      return result.recordset.map((row: any) => ({
+
+        const recordsets = result.recordsets;
+        if (!Array.isArray(recordsets) || recordsets.length < 2) {
+          throw new Error('Unexpected result structure from stored procedure');
+        }        
+
+      const summaryData = recordsets[0][0];
+      const summary: TransactionSummary = {
+        Total_Income: parseFloat(summaryData.Total_Income || 0),
+        Total_Expenses: parseFloat(summaryData.Total_Expenses || 0),
+        Total_Goal_Allocations: parseFloat(summaryData.Total_Goal_Allocations || 0),
+        Net_Balance: parseFloat(summaryData.Net_Balance || 0),
+      };
+
+      const transactions: Transaction[] = recordsets[1].map((row: any) => ({
         Transaction_ID: row.Transaction_ID,
         User_ID: row.User_ID,
         Title: row.Title,
@@ -70,16 +99,17 @@ export class TransactionService {
         Amount: parseFloat(row.Amount),
         Category_ID: row.Category_ID,
         Category_Name: row.Category_Name,
-        Type: row.Type,
         Transaction_Date: row.Transaction_Date,
-        Created_Date: row.Created_Date
+        Created_Date: row.Created_Date,
+        Type: row.Type,
       }));
+
+      return { summary, transactions }; 
     } catch (error) {
-      console.error('Error getting all transactions:', error);
+      console.error('Error getting transactions:', error);
       throw new Error('Failed to fetch transactions');
     }
   }
-
   // Get transaction by ID
   static async getTransactionById(transactionId: number, type: 'Income' | 'Expense', userId: number): Promise<Transaction | null> {
     try {
