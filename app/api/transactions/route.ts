@@ -16,11 +16,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as 'Income' | 'Expense' | null;
 
-    const transactions = await TransactionService.getAllTransactions(user.userId, type || undefined);
+    const result  = await TransactionService.getAllTransactions(user.userId, type || undefined);
 
     return NextResponse.json({
       success: true,
-      data: transactions
+      summary: {
+        totalIncome: result.summary.Total_Income,
+        totalExpenses: result.summary.Total_Expenses,
+        totalGoalAllocations: result.summary.Total_Goal_Allocations,
+        netBalance: result.summary.Net_Balance
+      },
+      data: result.transactions
     });
 
   } catch (error) {
