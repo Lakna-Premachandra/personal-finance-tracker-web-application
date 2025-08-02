@@ -62,12 +62,12 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, description, targetAmount, targetDate, category, status } = body;
+    const { title, description, targetAmount, targetDate, categoryId, status } = body;
 
     // Validate input
-    if (!title || !targetAmount || !targetDate) {
+    if (!title || !targetAmount || !targetDate || !categoryId) {
       return NextResponse.json(
-        { error: 'Title, targetAmount, and targetDate are required' },
+        { error: 'Title, targetAmount, targetDate, and categoryId are required' },
         { status: 400 }
       );
     }
@@ -79,7 +79,7 @@ export async function PUT(
       );
     }
 
-    // Validate target date
+    // Validate target date - CANNOT BE IN THE PAST
     const parsedTargetDate = new Date(targetDate);
     if (isNaN(parsedTargetDate.getTime())) {
       return NextResponse.json(
@@ -88,18 +88,22 @@ export async function PUT(
       );
     }
 
-    // Validate category if provided
-    if (category && !GoalService.getAvailableCategories().includes(category)) {
+    // Check if target date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    parsedTargetDate.setHours(0, 0, 0, 0);
+        
+    if (parsedTargetDate <= today) {
       return NextResponse.json(
-        { error: 'Invalid category. Available categories: ' + GoalService.getAvailableCategories().join(', ') },
+        { error: 'Target date cannot be in the past' },
         { status: 400 }
       );
     }
 
     // Validate status if provided
-    if (status && !['Active', 'Completed', 'Failed', 'Paused'].includes(status)) {
+    if (status && !['Active', 'Completed', 'Overdue', 'Achieved'].includes(status)) {
       return NextResponse.json(
-        { error: 'Invalid status. Available statuses: Active, Completed, Failed, Paused' },
+        { error: 'Invalid status. Available statuses: Active, Completed, Overdue, Achieved' },
         { status: 400 }
       );
     }
@@ -117,7 +121,7 @@ export async function PUT(
       description: description || '',
       targetAmount: parseFloat(targetAmount),
       targetDate: parsedTargetDate,
-      category: category || 'Other',
+      categoryId: categoryId,
       status: status || undefined
     };
 

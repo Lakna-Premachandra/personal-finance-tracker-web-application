@@ -25,9 +25,13 @@ import {
   Trash2,
   User,
   CreditCard,
-  Building
+  Building,
+  Crop,
+  RotateCw,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 // Update this path to your actual API file
 import { ProfileResponse, useCheckAgeTransitionMutation, useDeleteProfileMutation, useGetProfileByIdQuery, useUpdateProfileMutation } from "@/services/controllers/profileController"
 import { updateProfilePicture } from "@/store/slices/authSlice"
@@ -36,9 +40,262 @@ import { toast } from "sonner"; // or whatever toast library you're using
 import { useCurrency } from "@/hooks/useCurrency"
 import { CurrencyCode } from "@/store/slices/currencySlice"
 
+// Image Crop Component
+interface ImageCropperProps {
+  imageSrc: string
+  onCrop: (croppedImageBlob: Blob) => void
+  onCancel: () => void
+  aspectRatio?: number
+}
+
+const ImageCropper: React.FC<ImageCropperProps> = ({
+  imageSrc,
+  onCrop,
+  onCancel,
+  aspectRatio = 1
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0, width: 200, height: 200 })
+  const [scale, setScale] = useState(1)
+  const [rotation, setRotation] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [imageLoaded, setImageLoaded] = useState(false)
+
+  useEffect(() => {
+    if (imageRef.current) {
+      imageRef.current.onload = () => {
+        setImageLoaded(true)
+        // Center the crop area
+        const img = imageRef.current!
+        const size = Math.min(img.width, img.height) * 0.8
+        setCrop({
+          x: (img.width - size) / 2,
+          y: (img.height - size) / 2,
+          width: size,
+          height: size / aspectRatio
+        })
+      }
+    }
+  }, [imageSrc, aspectRatio])
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    // Check if clicking on resize handle (bottom-right corner)
+    const handleSize = 10
+    if (
+      x >= crop.x + crop.width - handleSize &&
+      x <= crop.x + crop.width + handleSize &&
+      y >= crop.y + crop.height - handleSize &&
+      y <= crop.y + crop.height + handleSize
+    ) {
+      setIsResizing(true)
+    } else if (
+      x >= crop.x &&
+      x <= crop.x + crop.width &&
+      y >= crop.y &&
+      y <= crop.y + crop.height
+    ) {
+      setIsDragging(true)
+      setDragStart({ x: x - crop.x, y: y - crop.y })
+    }
+  }, [crop])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!canvasRef.current || !imageRef.current) return
+
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    if (isDragging) {
+      const newX = Math.max(0, Math.min(x - dragStart.x, imageRef.current.width - crop.width))
+      const newY = Math.max(0, Math.min(y - dragStart.y, imageRef.current.height - crop.height))
+      setCrop(prev => ({ ...prev, x: newX, y: newY }))
+    } else if (isResizing) {
+      const newWidth = Math.max(50, Math.min(x - crop.x, imageRef.current.width - crop.x))
+      const newHeight = aspectRatio ? newWidth / aspectRatio : Math.max(50, Math.min(y - crop.y, imageRef.current.height - crop.y))
+      setCrop(prev => ({ ...prev, width: newWidth, height: newHeight }))
+    }
+  }, [isDragging, isResizing, dragStart, crop, aspectRatio])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+    setIsResizing(false)
+  }, [])
+
+  const drawCanvas = useCallback(() => {
+    if (!canvasRef.current || !imageRef.current || !imageLoaded) return
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const img = imageRef.current
+
+    // Set canvas size to match image
+    canvas.width = img.width
+    canvas.height = img.height
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // Save context for transformations
+    ctx.save()
+
+    // Apply transformations
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate((rotation * Math.PI) / 180)
+    ctx.scale(scale, scale)
+    ctx.translate(-canvas.width / 2, -canvas.height / 2)
+
+    // Draw image
+    ctx.drawImage(img, 0, 0, img.width, img.height)
+
+    // Restore context
+    ctx.restore()
+
+    // Draw crop overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Draw the actual image in the crop area (not clearing it)
+    ctx.save()
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, crop.x, crop.y, crop.width, crop.height)
+    ctx.restore()
+
+    // Draw crop border
+    ctx.strokeStyle = '#3b82f6'
+    ctx.lineWidth = 2
+    ctx.strokeRect(crop.x, crop.y, crop.width, crop.height)
+
+    // Draw resize handle
+    ctx.fillStyle = '#3b82f6'
+    ctx.fillRect(crop.x + crop.width - 5, crop.y + crop.height - 5, 10, 10)
+
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+    ctx.lineWidth = 1
+    const gridX = crop.width / 3
+    const gridY = crop.height / 3
+
+    for (let i = 1; i < 3; i++) {
+      ctx.beginPath()
+      ctx.moveTo(crop.x + i * gridX, crop.y)
+      ctx.lineTo(crop.x + i * gridX, crop.y + crop.height)
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.moveTo(crop.x, crop.y + i * gridY)
+      ctx.lineTo(crop.x + crop.width, crop.y + i * gridY)
+      ctx.stroke()
+    }
+  }, [crop, scale, rotation, imageLoaded])
+
+  useEffect(() => {
+    drawCanvas()
+  }, [drawCanvas])
+
+  const handleCrop = async () => {
+    if (!canvasRef.current || !imageRef.current) return
+
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    canvas.width = crop.width
+    canvas.height = crop.height
+
+    ctx.drawImage(
+      imageRef.current,
+      crop.x, crop.y, crop.width, crop.height,
+      0, 0, crop.width, crop.height
+    )
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        onCrop(blob)
+      }
+    }, 'image/jpeg', 0.9)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="relative border rounded-lg overflow-hidden bg-gray-100">
+        <img
+          ref={imageRef}
+          src={imageSrc}
+          alt="Crop preview"
+          className="hidden"
+        />
+        {imageLoaded && (
+          <canvas
+            ref={canvasRef}
+            className="max-w-full max-h-96 cursor-move"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setScale(Math.max(0.5, scale - 0.1))}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-gray-600 min-w-16 text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setScale(Math.min(3, scale + 0.1))}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setRotation((rotation + 90) % 360)}
+        >
+          <RotateCw className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={handleCrop} className="bg-blue-600 hover:bg-blue-700">
+          <Crop className="mr-2 h-4 w-4" />
+          Crop Image
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function YoungAdultSettingsPage() {
   const [userId, setUserId] = useState(null)
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null)
+  const [showImageCropper, setShowImageCropper] = useState(false)
+  const [originalImage, setOriginalImage] = useState<string | null>(null)
   const [profile, setProfile] = useState<ProfileResponse>({
     success: false,
     data: {
@@ -59,6 +316,7 @@ export default function YoungAdultSettingsPage() {
   // const [currency, setCurrency] = useState("usd")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { currency, setCurrency, allCurrencies } = useCurrency();
+
   // Get user ID from session storage or token
   useEffect(() => {
     const token = sessionStorage.getItem('token')
@@ -126,8 +384,6 @@ export default function YoungAdultSettingsPage() {
   console.log('Profile Data:', profileData)
 
   // Handle profile update
-  // Handle profile update
-  // Handle profile update
   const handleSaveChanges = async () => {
     if (!userId) return
 
@@ -154,11 +410,7 @@ export default function YoungAdultSettingsPage() {
         profilePicture: profile.data.profilePicture,
         guardianContactNo: profile.data.guardianContactNo,
         employmentStatus: profile.data.employmentStatus,
-
       }
-
-      // Only include dateOfBirth for students
-
 
       // Update profile
       const result = await updateProfile({
@@ -179,6 +431,7 @@ export default function YoungAdultSettingsPage() {
       toast.error("Failed to update profile")
     }
   }
+
   // Handle account deletion
   const handleDeleteAccount = async () => {
     if (!userId) return
@@ -202,16 +455,47 @@ export default function YoungAdultSettingsPage() {
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const previewURL = URL.createObjectURL(file);
-      setProfilePicturePreview(previewURL);
-      setProfile((prev) => ({
-        ...prev,
-        data: {
-          ...prev.data,
-          profilePicture: file,
-        }
-      }));
+      // Validate file size (2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("File size must be less than 2MB")
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please select a valid image file")
+        return
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setOriginalImage(result);
+        setShowImageCropper(true);
+      };
+      reader.readAsDataURL(file);
     }
+  };
+
+  // Handle cropped image
+  const handleCroppedImage = (croppedImageBlob: Blob) => {
+    const croppedImageURL = URL.createObjectURL(croppedImageBlob);
+    setProfilePicturePreview(croppedImageURL);
+    setProfile((prev) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        profilePicture: croppedImageBlob,
+      }
+    }));
+    setShowImageCropper(false);
+    toast.success("Image cropped successfully!");
+  };
+
+  // Cancel image cropping
+  const handleCancelCrop = () => {
+    setShowImageCropper(false);
+    setOriginalImage(null);
   };
 
   // Calculate age from date of birth
@@ -254,11 +538,30 @@ export default function YoungAdultSettingsPage() {
 
   return (
     <div className="space-y-6">
-
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Manage your account settings and preferences</p>
       </div>
+
+      {/* Image Cropper Dialog */}
+      <Dialog open={showImageCropper} onOpenChange={setShowImageCropper}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Crop Your Profile Picture</DialogTitle>
+            <DialogDescription>
+              Adjust your image by dragging the crop area and using the controls below.
+            </DialogDescription>
+          </DialogHeader>
+          {originalImage && (
+            <ImageCropper
+              imageSrc={originalImage}
+              onCrop={handleCroppedImage}
+              onCancel={handleCancelCrop}
+              aspectRatio={1}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-6">
         {/* Profile Settings */}
@@ -379,7 +682,6 @@ export default function YoungAdultSettingsPage() {
                 />
               </div>
             </div>
-
 
             {/* Employment Status for Young Adults */}
             <div>

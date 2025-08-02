@@ -9,14 +9,17 @@ export interface Goal {
   Current_Amount: number;
   Start_Date: Date;
   Target_Date: Date;
-  Category: string;
-  Status: 'Active' | 'Completed' | 'Failed' | 'Paused';
+  Category_Name?: string; 
+  Category_ID: number;
+  Status: 'Active' | 'Completed' | 'Overdue' | 'Achieved';
   Created_Date: Date;
   Updated_Date: Date;
   Days_Left: number;
   Remaining_Amount: number;
   Completion_Percentage: number;
   Daily_Saving_Required: number;
+
+  
 }
 
 export interface GoalInput {
@@ -24,8 +27,19 @@ export interface GoalInput {
   description?: string;
   targetAmount: number;
   targetDate: Date | string;
-  category?: string;
+  categoryId: number;
   startDate?: Date | string;
+}
+export interface GoalSummary {
+  activeGoals: number;
+  completedGoals: number;
+  totalSaved: number;
+  totalTargetAmount: number;
+}
+
+export interface GoalsResponse {
+  summary: GoalSummary;
+  goals: Goal[];
 }
 
 export interface GoalResponse {
@@ -37,6 +51,19 @@ export interface GoalResponse {
 export interface ContributeToGoalInput {
   goalId: number;
   amount: number;
+}
+
+export interface CategoryOption {
+  Category_ID: number;
+  Name: string;
+  Type: 'Expense';
+  Is_Default: boolean;
+}
+
+export interface MarkAsSpentResponse {
+  Status: 'SUCCESS' | 'ERROR';
+  Message: string;
+  Expense_ID?: number;
 }
 
 export class GoalService {
@@ -58,7 +85,7 @@ export class GoalService {
         .input('Description', sql.VarChar(500), goalInput.description || '')
         .input('TargetAmount', sql.Decimal(12, 2), goalInput.targetAmount)
         .input('TargetDate', sql.Date, this.parseDate(goalInput.targetDate))
-        .input('Category', sql.VarChar(50), goalInput.category || 'Other');
+        .input('CategoryID', sql.Int, goalInput.categoryId);
 
       if (goalInput.startDate) {
         request.input('StartDate', sql.Date, this.parseDate(goalInput.startDate));
@@ -79,34 +106,90 @@ export class GoalService {
   }
 
   // Get all goals for a user
-  static async getAllGoals(userId: number): Promise<Goal[]> {
+  // static async getAllGoals(userId: number): Promise<Goal[]> {
+  //   try {
+  //     const pool = await connectToDatabase();
+  //     const result = await pool.request()
+  //       .input('UserID', sql.Int, userId)
+  //       .execute('GetAllGoals');
+      
+  //     return result.recordset.map((row: any) => ({
+  //       Goal_ID: row.Goal_ID,
+  //       User_ID: row.User_ID,
+  //       Title: row.Title,
+  //       Description: row.Description,
+  //       Target_Amount: parseFloat(row.Target_Amount),
+  //       Current_Amount: parseFloat(row.Current_Amount),
+  //       Start_Date: row.Start_Date,
+  //       Target_Date: row.Target_Date,
+  //       Category_ID: row.Category_ID,
+  //       Category_Name: row.Category_Name,
+  //       Status: row.Status,
+  //       Created_Date: row.Created_Date,
+  //       Updated_Date: row.Updated_Date,
+  //       Days_Left: row.Days_Left,
+  //       Remaining_Amount: parseFloat(row.Remaining_Amount),
+  //       Completion_Percentage: parseFloat(row.Completion_Percentage),
+  //       Daily_Saving_Required: parseFloat(row.Daily_Saving_Required)
+  //     }));
+  //   } catch (error) {
+  //     console.error('Error getting all goals:', error);
+  //     throw new Error('Failed to fetch goals');
+  //   }
+  // }
+ static async getAllGoals(userId: number): Promise<GoalsResponse> {
     try {
       const pool = await connectToDatabase();
       const result = await pool.request()
         .input('UserID', sql.Int, userId)
         .execute('GetAllGoals');
+
+      // Fix TypeScript errors by properly typing and checking recordsets
+      const recordsets = result.recordsets;
       
-      return result.recordset.map((row: any) => ({
-        Goal_ID: row.Goal_ID,
-        User_ID: row.User_ID,
-        Title: row.Title,
-        Description: row.Description,
-        Target_Amount: parseFloat(row.Target_Amount),
-        Current_Amount: parseFloat(row.Current_Amount),
-        Start_Date: row.Start_Date,
-        Target_Date: row.Target_Date,
-        Category: row.Category,
-        Status: row.Status,
-        Created_Date: row.Created_Date,
-        Updated_Date: row.Updated_Date,
-        Days_Left: row.Days_Left,
-        Remaining_Amount: parseFloat(row.Remaining_Amount),
-        Completion_Percentage: parseFloat(row.Completion_Percentage),
-        Daily_Saving_Required: parseFloat(row.Daily_Saving_Required)
-      }));
+      // Ensure recordsets is an array and has the expected structure
+      if (!Array.isArray(recordsets) || recordsets.length < 2) {
+        throw new Error('Invalid stored procedure response format');
+      }
+
+      // First result set contains summary data
+      const summaryRecordset = recordsets[0];
+      const summaryData = summaryRecordset && summaryRecordset.length > 0 ? summaryRecordset[0] : null;
+
+      // Second result set contains goals data
+      const goalsRecordset = recordsets[1];
+      const goalsData = goalsRecordset || [];
+
+      return {
+        summary: {
+          activeGoals: summaryData?.ActiveGoals || 0,
+          completedGoals: summaryData?.CompletedGoals || 0,
+          totalSaved: parseFloat(summaryData?.TotalSaved) || 0,
+          totalTargetAmount: parseFloat(summaryData?.TotalTargetAmount) || 0
+        },
+        goals: goalsData.map((row: any) => ({
+          Goal_ID: row.Goal_ID,
+          User_ID: row.User_ID,
+          Title: row.Title,
+          Description: row.Description,
+          Target_Amount: parseFloat(row.Target_Amount),
+          Current_Amount: parseFloat(row.Current_Amount),
+          Start_Date: row.Start_Date,
+          Target_Date: row.Target_Date,
+          Category_ID: row.Category_ID,
+          Category_Name: row.Category_Name,
+          Status: row.Status,
+          Created_Date: row.Created_Date,
+          Updated_Date: row.Updated_Date,
+          Days_Left: row.Days_Left,
+          Remaining_Amount: parseFloat(row.Remaining_Amount),
+          Completion_Percentage: parseFloat(row.Completion_Percentage),
+          Daily_Saving_Required: parseFloat(row.Daily_Saving_Required)
+        }))
+      };
     } catch (error) {
       console.error('Error getting all goals:', error);
-      throw new Error('Failed to fetch goals');
+      throw error;
     }
   }
 
@@ -133,7 +216,8 @@ export class GoalService {
         Current_Amount: parseFloat(row.Current_Amount),
         Start_Date: row.Start_Date,
         Target_Date: row.Target_Date,
-        Category: row.Category,
+        Category_ID: row.Category_ID,
+        Category_Name: row.Category_Name,
         Status: row.Status,
         Created_Date: row.Created_Date,
         Updated_Date: row.Updated_Date,
@@ -180,7 +264,7 @@ export class GoalService {
         .input('Description', sql.VarChar(500), goalInput.description || '')
         .input('TargetAmount', sql.Decimal(12, 2), goalInput.targetAmount)
         .input('TargetDate', sql.Date, this.parseDate(goalInput.targetDate))
-        .input('Category', sql.VarChar(50), goalInput.category || 'Other')
+        .input('CategoryID', sql.Int, goalInput.categoryId)
         .input('Status', sql.VarChar(20), goalInput.status || null)
         .execute('UpdateGoal');
       
@@ -215,19 +299,24 @@ export class GoalService {
     }
   }
 
-  // Get available categories
-  static getAvailableCategories(): string[] {
-    return [
-      'Saving',
-      'Technology', 
-      'Travel',
-      'Education',
-      'Health',
-      'Home',
-      'Car',
-      'Emergency',
-      'Investment',
-      'Other'
-    ];
+  // Mark goal as spent (move to expenses and complete goal)
+  static async markGoalAsSpent(goalId: number, userId: number): Promise<MarkAsSpentResponse> {
+    try {
+      const pool = await connectToDatabase();
+      const result = await pool.request()
+        .input('GoalID', sql.Int, goalId)
+        .input('UserID', sql.Int, userId)
+        .execute('MarkGoalAsSpent');
+      
+      const response = result.recordset[0];
+      return {
+        Status: response.Status,
+        Message: response.Message,
+        Expense_ID: response.Expense_ID
+      };
+    } catch (error) {
+      console.error('Error marking goal as spent:', error);
+      throw new Error('Failed to mark goal as spent');
+    }
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 //this is student 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { TransactionCalendar } from "@/components/transaction-calendar"
 import { TransactionList } from "@/components/transaction-list"
 import { ExportDialog } from "@/components/export-dialog"
-import { Plus, CalendarIcon, ArrowUpRight, ArrowDownRight, CalendarIcon as CalendarViewIcon, List } from "lucide-react"
+import { Plus, CalendarIcon, ArrowUpRight, ArrowDownRight, CalendarIcon as CalendarViewIcon, List, Target } from "lucide-react"
 import { format } from "date-fns"
 import { useGetCategoriesByTypeAndUserTypeQuery } from "@/services/controllers/categoryController"
 import {
@@ -44,14 +44,14 @@ import { useCurrency } from "@/hooks/useCurrency"
 
 export default function TransactionsPage() {
   const [date, setDate] = useState<Date>(new Date())
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("list")
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar")
   const [selectedTransactionType, setSelectedTransactionType] = useState<"Income" | "Expense" | "">("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-      const { formatCurrency, getCurrencySymbol } = useCurrency();
-  
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
+
 
   // Form states
   const [formData, setFormData] = useState({
@@ -62,7 +62,7 @@ export default function TransactionsPage() {
   })
 
   // API hooks
-  const { data: transactionsData, isLoading: isTransactionsLoading } = useGetTransactionsQuery()
+  const { data: transactionsData, isLoading: isTransactionsLoading, refetch: refetchTransactions } = useGetTransactionsQuery()
   const { data: categoriesData, isLoading: isCategoriesLoading } = useGetCategoriesByTypeAndUserTypeQuery(
     {
       type: selectedTransactionType as "Income" | "Expense",
@@ -72,6 +72,8 @@ export default function TransactionsPage() {
       skip: !selectedTransactionType,
     }
   )
+  const summary = transactionsData?.summary
+
 
   const [createTransaction, { isLoading: isCreating }] = useCreateTransactionMutation()
   const [updateTransaction, { isLoading: isUpdating }] = useUpdateTransactionMutation()
@@ -79,15 +81,21 @@ export default function TransactionsPage() {
 
   // Use API data if available, otherwise fallback to mock data
   const transactions = transactionsData?.data || []
+  const totalIncome = summary?.totalIncome || 0
+  const totalExpenses = Math.abs(summary?.totalExpenses || 0)
+  const netBalance = summary?.netBalance || 0
+  const totalGoalAllocations = summary?.totalGoalAllocations || 0
 
-  const totalIncome = transactions.filter((t) => t.Type === "Income").reduce((sum, t) => sum + t.Amount, 0)
-  const totalExpenses = Math.abs(transactions.filter((t) => t.Type === "Expense").reduce((sum, t) => sum + t.Amount, 0))
+
 
   const getAvailableCategories = () => {
     if (!categoriesData?.data) return []
     return categoriesData.data
   }
 
+  useEffect(() => {
+    refetchTransactions()
+  }, [netBalance])
   const handleTransactionTypeChange = (type: string) => {
     setSelectedTransactionType(type as "Income" | "Expense")
     setFormData({ ...formData, categoryId: "" }) // Reset category when type changes
@@ -574,36 +582,46 @@ export default function TransactionsPage() {
       </AlertDialog>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3 xs:grid-cols-2 md:grid-cols-4">
         <Card className=" ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-600">Total Income</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">{getCurrencySymbol()} {totalIncome.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-700">{getCurrencySymbol()} {totalIncome}</div>
             <p className="text-xs text-green-600">All time</p>
           </CardContent>
         </Card>
 
         <Card className="">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium text-red-600">Total Expenses</CardTitle>
             <ArrowDownRight className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-700">{getCurrencySymbol()} {totalExpenses.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-700">{getCurrencySymbol()} {totalExpenses}</div>
             <p className="text-xs text-red-600">All time</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-orange-600">Goal Amount</CardTitle>
+            <Target className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-700">({getCurrencySymbol()}) {totalGoalAllocations}</div>
+            <p className="text-xs text-orange-600">All time</p>
           </CardContent>
         </Card>
 
         <Card className=" ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-600">Net Balance</CardTitle>
             <CalendarIcon className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700">{getCurrencySymbol()} {(totalIncome - totalExpenses).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-blue-700">{getCurrencySymbol()} {netBalance}</div>
             <p className="text-xs text-blue-600">All time</p>
           </CardContent>
         </Card>
