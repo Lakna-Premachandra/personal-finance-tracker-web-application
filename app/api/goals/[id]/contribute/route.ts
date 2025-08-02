@@ -35,7 +35,27 @@ export async function POST(
       );
     }
 
-    const result = await GoalService.contributeToGoal(user.userId, goalId, parseFloat(amount));
+    // Get current goal to check contribution limit
+    const currentGoal = await GoalService.getGoalById(goalId, user.userId);
+    if (!currentGoal) {
+      return NextResponse.json(
+        { error: 'Goal not found' },
+        { status: 404 }
+      );
+    }
+
+    const contributionAmount = parseFloat(amount);
+    const remainingAmount = currentGoal.Target_Amount - currentGoal.Current_Amount;
+
+    // Check if contribution exceeds remaining target amount
+    if (contributionAmount > remainingAmount) {
+      return NextResponse.json(
+        { error: `Contribution amount (${contributionAmount}) exceeds remaining target amount (${remainingAmount})` },
+        { status: 400 }
+      );
+    }
+
+    const result = await GoalService.contributeToGoal(user.userId, goalId, contributionAmount);
 
     if (result.Status === 'ERROR') {
       return NextResponse.json(

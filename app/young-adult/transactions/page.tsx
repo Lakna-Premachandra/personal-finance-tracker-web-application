@@ -1,19 +1,8 @@
 "use client"
 //this is young adult
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { ExportDialog } from "@/components/export-dialog"
+import { TransactionCalendar } from "@/components/transaction-calendar"
+import { TransactionList } from "@/components/transaction-list"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,35 +11,42 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { TransactionCalendar } from "@/components/transaction-calendar"
-import { TransactionList } from "@/components/transaction-list"
-import { ExportDialog } from "@/components/export-dialog"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Plus,
-  Calendar as CalendarIcon,
-  ArrowUpRight,
-  ArrowDownRight,
-  Calendar as CalendarViewIcon,
-  List,
-  Edit2,
-  X,
-  Settings,
-  Pencil,
-  Trash2,
-  Edit
-} from "lucide-react"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Calendar as CalendarIcon,
+  Calendar as CalendarViewIcon,
+  Edit2,
+  List,
+  Plus,
+  Target,
+  Trash2
+} from "lucide-react"
+import { useEffect, useState } from "react"
 
-import { toast } from "sonner"
-import { Category, useAddCategoryMutation, useDeleteCategoryMutation, useGetCategoriesByTypeQuery, useUpdateCategoryMutation } from "@/services/controllers/categoryController"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useGetTransactionsQuery, useCreateTransactionMutation, useUpdateTransactionMutation, useDeleteTransactionMutation, Transaction } from "@/services/controllers/transactionController"
 import { useCurrency } from "@/hooks/useCurrency"
+import { Category, useAddCategoryMutation, useDeleteCategoryMutation, useGetCategoriesByTypeQuery, useUpdateCategoryMutation } from "@/services/controllers/categoryController"
+import { Transaction, useCreateTransactionMutation, useDeleteTransactionMutation, useGetTransactionsQuery, useUpdateTransactionMutation } from "@/services/controllers/transactionController"
+import { toast } from "sonner"
 
 export default function YoungAdultTransactionsPage() {
   const [date, setDate] = useState<Date>()
@@ -68,7 +64,7 @@ export default function YoungAdultTransactionsPage() {
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [showValidation, setShowValidation] = useState(false)
-const { formatCurrency, getCurrencySymbol } = useCurrency();
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
   // Form state
   const [formData, setFormData] = useState({
     title: "",
@@ -77,7 +73,8 @@ const { formatCurrency, getCurrencySymbol } = useCurrency();
   })
 
   // RTK Query hooks
-  const { data: transactionsData, isLoading: isTransactionsLoading } = useGetTransactionsQuery()
+  const { data: transactionsData, isLoading: isTransactionsLoading,
+    refetch: refetchTransactions } = useGetTransactionsQuery()
   const [createTransaction, { isLoading: isCreatingTransaction }] = useCreateTransactionMutation()
   const [updateTransaction, { isLoading: isUpdatingTransaction }] = useUpdateTransactionMutation()
   const [deleteTransaction, { isLoading: isDeletingTransaction }] = useDeleteTransactionMutation()
@@ -95,10 +92,17 @@ const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   // Use actual transactions from API or fallback to mock data
   const transactions = transactionsData?.data || []
+  const summary = transactionsData?.summary
 
-  const totalIncome = transactions.filter((t) => t.Type === "Income").reduce((sum, t) => sum + t.Amount, 0)
-  const totalExpenses = Math.abs(transactions.filter((t) => t.Type === "Expense").reduce((sum, t) => sum + t.Amount, 0))
 
+
+  const totalIncome = summary?.totalIncome || 0
+  const totalExpenses = Math.abs(summary?.totalExpenses || 0)
+  const totalGoalAllocations = summary?.totalGoalAllocations || 0
+  const netBalance = summary?.netBalance || 0
+  useEffect(() => {
+    refetchTransactions()
+  }, [netBalance])
   const handleTransactionTypeChange = (type: string) => {
     setSelectedTransactionType(type as "Income" | "Expense")
     setSelectedCategoryId("")
@@ -893,7 +897,7 @@ const { formatCurrency, getCurrencySymbol } = useCurrency();
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3 xs:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-600">Total Income</CardTitle>
@@ -916,19 +920,32 @@ const { formatCurrency, getCurrencySymbol } = useCurrency();
           </CardContent>
         </Card>
 
+
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-orange-600">Goal Amount</CardTitle>
+            <Target className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-700">({getCurrencySymbol()}) {totalGoalAllocations.toLocaleString()}</div>
+            <p className="text-xs text-orange-600">All time</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-600">Net Balance</CardTitle>
             <CalendarIcon className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700">({getCurrencySymbol()}) {(totalIncome - totalExpenses).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-blue-700">({getCurrencySymbol()}) {netBalance.toLocaleString()}</div>
             <p className="text-xs text-blue-600">All time</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="w-full flex justify-end"> 
+      <div className="w-full flex justify-end">
         <ExportDialog transactions={transactions} userType="young-adult" />
       </div>
 

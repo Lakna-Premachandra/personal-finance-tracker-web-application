@@ -20,6 +20,6 @@ const baseQueryWithAuth = fetchBaseQuery({
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithAuth,
-  tagTypes: ['User', 'Transaction', 'Budget', 'Category', 'MonthlySummary', 'Profile', 'CronStatus', 'ManualCheck', 'CronLogs', 'NotificationStats', 'UnprocessedNotifications', 'Notifications', 'UserNotifications', 'UserProfile','CronCheck','CronSchedule'], // Add more as needed
+  tagTypes: ['User', 'Goal', 'Transaction', 'Budget', 'Category', 'MonthlySummary', 'Profile', 'CronStatus', 'ManualCheck', 'CronLogs', 'NotificationStats', 'UnprocessedNotifications', 'Notifications', 'UserNotifications', 'UserProfile','CronCheck','CronSchedule'], // Add more as needed
   endpoints: () => ({}),
 })

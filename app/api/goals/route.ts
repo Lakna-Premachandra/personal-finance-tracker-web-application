@@ -13,11 +13,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const goals = await GoalService.getAllGoals(user.userId);
+    const result = await GoalService.getAllGoals(user.userId);
 
     return NextResponse.json({
       success: true,
-      data: goals
+      data: result.goals,
+      summary: result.summary
     });
 
   } catch (error) {
@@ -41,12 +42,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, targetAmount, targetDate, category, startDate } = body;
+    const { title, description, targetAmount, targetDate, categoryId, startDate } = body;
 
     // Validate input
-    if (!title || !targetAmount || !targetDate) {
+    if (!title || !targetAmount || !targetDate || !categoryId) {
       return NextResponse.json(
-        { error: 'Title, targetAmount, and targetDate are required' },
+        { error: 'Title, targetAmount, targetDate, and categoryId are required' },
         { status: 400 }
       );
     }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     parsedTargetDate.setHours(0, 0, 0, 0);
-    
+        
     if (parsedTargetDate <= today) {
       return NextResponse.json(
         { error: 'Target date must be in the future' },
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate start date if provided
+    // Validate start date if provided - CANNOT BE IN THE PAST
     if (startDate) {
       const parsedStartDate = new Date(startDate);
       if (isNaN(parsedStartDate.getTime())) {
@@ -89,6 +90,15 @@ export async function POST(request: NextRequest) {
         );
       }
       
+      // Check if start date is in the past
+      parsedStartDate.setHours(0, 0, 0, 0);
+      if (parsedStartDate < today) {
+        return NextResponse.json(
+          { error: 'Start date cannot be in the past' },
+          { status: 400 }
+        );
+      }
+            
       if (parsedStartDate > parsedTargetDate) {
         return NextResponse.json(
           { error: 'Start date cannot be after target date' },
@@ -97,20 +107,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate category if provided
-    if (category && !GoalService.getAvailableCategories().includes(category)) {
-      return NextResponse.json(
-        { error: 'Invalid category. Available categories: ' + GoalService.getAvailableCategories().join(', ') },
-        { status: 400 }
-      );
-    }
-
     const goalInput = {
       title,
       description: description || '',
       targetAmount: parseFloat(targetAmount),
       targetDate: parsedTargetDate,
-      category: category || 'Other',
+      categoryId: categoryId,
       startDate: startDate ? new Date(startDate) : undefined
     };
 
@@ -126,8 +128,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: result.Message,
-      data: { 
-        goalId: result.Goal_ID
+      data: {
+         goalId: result.Goal_ID
       }
     }, { status: 201 });
 
@@ -139,3 +141,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

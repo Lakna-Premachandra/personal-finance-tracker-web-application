@@ -33,6 +33,12 @@ export interface UpdateTransactionRequest {
 export interface TransactionResponse {
     success: boolean
     data: Transaction[]
+    summary: {
+        totalIncome: number
+        totalExpenses: number
+        totalGoalAllocations: number
+        netBalance: number
+    }
 }
 
 export interface SingleTransactionResponse {
@@ -92,7 +98,7 @@ export const transactionApi = api.injectEndpoints({
         // GET ALL transactions
         getTransactions: builder.query<TransactionResponse, void>({
             query: () => '/transactions',
-            providesTags: ['Transaction','Category'],
+            providesTags: ['Transaction', 'Category'],
         }),
 
         // GET transactions by type

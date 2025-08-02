@@ -51,7 +51,8 @@ import {
   TrendingUp,
   MoreVertical,
   Edit,
-  Trash2
+  Trash2,
+  PiggyBank
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useGetBudgetStatusQuery } from "@/services/controllers/transactionController"
@@ -79,8 +80,8 @@ export default function YoungAdultBudgetPage() {
   const [editingBudget, setEditingBudget] = useState<BudgetData | null>(null)
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-    const { formatCurrency, getCurrencySymbol } = useCurrency();
-  
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
+
 
   // Form state for adding/editing budget
   const [budgetForm, setBudgetForm] = useState({
@@ -672,10 +673,14 @@ export default function YoungAdultBudgetPage() {
         <TabsContent value="categories" className="space-y-4">
           <div className="grid gap-4">
             {isBudgetStatusLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  Loading budget categories...
+              <div className="flex items-center justify-center  min-h-[500px]">
+                {/* <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading goals...</span> */}
+                <div className="relative">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm ">
+                    <PiggyBank className="h-10 w-10 text-gray-500" />
+                  </div>
+                  <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
                 </div>
               </div>
             ) : categories.length === 0 ? (
