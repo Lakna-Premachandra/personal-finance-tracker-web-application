@@ -1,135 +1,76 @@
 import cron from 'node-cron';
-import { connectToDatabase } from '@/lib/database/db';
 import { PaymentReminderService } from './paymentReminderService';
 import { EmailService } from './emailService';
 
-export class CronService {
-  private static instance: CronService;
-  private isRunning: boolean = false;
-  private lastRun: Date | null = null;
-
+export class PaymentReminderCronService {
   private paymentReminderService: PaymentReminderService;
   private emailService: EmailService;
+  private isRunning: boolean = false;
 
-  private constructor() {
+  constructor() {
     this.paymentReminderService = new PaymentReminderService();
     this.emailService = new EmailService();
-    this.startJobs();
   }
 
-  public static getInstance(): CronService {
-    if (!CronService.instance) {
-      CronService.instance = new CronService();
-    }
-    return CronService.instance;
-  }
-
-  private startJobs() {
+  start() {
     if (this.isRunning) {
-      console.log('Cron jobs are already running');
+      console.log('Payment reminder cron service is already running');
       return;
     }
 
-    //  Birthday notifications - run every hour
-    cron.schedule('0 * * * *', async () => {
-      console.log('Running hourly birthday check...');
-      await this.runBirthdayCheck();
-    });
-
-    //  Payment reminders - run daily at 9AM
+    // Run every day at 9:00 AM
     cron.schedule('0 9 * * *', async () => {
-      console.log('Running daily 9AM payment reminder check...');
+      console.log('Running payment reminder check...');
       await this.checkAndSendPaymentReminders();
     });
 
-    //  Payment reminders - also run every 6 hours
+    // Also run every 6 hours for more frequent checks
     cron.schedule('0 */6 * * *', async () => {
       console.log('Running 6-hourly payment reminder check...');
       await this.checkAndSendPaymentReminders();
     });
 
     this.isRunning = true;
-    console.log('Cron service started successfully');
+    console.log('Payment reminder cron service started');
   }
 
-  public stop() {
+  stop() {
     this.isRunning = false;
-    console.log('Cron service stopped (scheduled jobs will not execute)');
+    console.log('Payment reminder cron service stopped');
   }
 
-  public getStatus() {
+  getStatus() {
     return {
       isRunning: this.isRunning,
-      lastRun: this.lastRun?.toISOString() || null,
-      service: 'CronService'
+      service: 'PaymentReminderCronService'
     };
   }
 
-  // ------------------  Birthday Check ------------------
-  public async runBirthdayCheck(): Promise<any> {
-    this.lastRun = new Date();
-
-    try {
-      console.log('Starting birthday check at:', this.lastRun.toISOString());
-
-      const pool = await connectToDatabase();
-
-      // Update ages
-      const ageUpdateRequest = pool.request();
-      const ageUpdateResult = await ageUpdateRequest.execute('sp_UpdateUserAges');
-
-      // Send birthday notifications
-      const notificationRequest = pool.request();
-      const notificationResult = await notificationRequest.execute('sp_SendBirthdayNotifications');
-
-      const notifiedUsers = notificationResult.recordset;
-
-      return {
-        success: true,
-        timestamp: this.lastRun.toISOString(),
-        agesUpdated: ageUpdateResult.recordset[0]?.UpdatedRows || 0,
-        notificationsSent: notifiedUsers.length,
-        notifiedUsers: notifiedUsers.map((user: any) => ({
-          userId: user.User_ID,
-          username: user.Username,
-          newAge: user.NewAge,
-        })),
-      };
-    } catch (error) {
-      console.error('Error in birthday check:', error);
-      throw error;
-    }
-  }
-
-  // ------------------  Payment Reminders ------------------
-  public async checkAndSendPaymentReminders() {
+  async checkAndSendPaymentReminders() {
     try {
       console.log('Checking for due payment reminders...');
+      
       const dueReminders = await this.paymentReminderService.getDuePaymentReminders();
-
+      
       if (dueReminders.length === 0) {
         console.log('No due payment reminders found');
-        return [];
+        return;
       }
 
       console.log(`Found ${dueReminders.length} due payment reminders`);
 
-      const processed: any[] = [];
-
       for (const reminder of dueReminders) {
         try {
           await this.processDueReminder(reminder);
-          processed.push(reminder);
         } catch (error) {
           console.error(`Error processing reminder ${reminder.Reminder_ID}:`, error);
         }
       }
 
-      console.log(`Payment reminder check completed. Processed: ${processed.length}`);
-      return processed;
+      console.log('Payment reminder check completed');
+      
     } catch (error) {
       console.error('Error in payment reminder cron job:', error);
-      return [];
     }
   }
 
@@ -146,6 +87,7 @@ export class CronService {
         message = `Your payment "${reminder.Title}" is overdue by ${Math.abs(daysUntilDue)} day(s)! Amount: $${reminder.Amount}`;
       }
 
+      // Create notification in database
       await this.paymentReminderService.createPaymentReminderNotification(
         reminder.Reminder_ID,
         reminder.User_ID,
@@ -155,14 +97,23 @@ export class CronService {
         reminder.Amount
       );
 
+      // Send email notification
       if (reminder.Email) {
+        // await this.emailService.sendPaymentReminderEmail(
+        //   reminder.Email,
+        //   reminder.Username,
+        //   reminder.Title,
+        //   reminder.Amount,
+        //   reminder.Next_Due_Date,
+        //   daysUntilDue
+        // );
         await this.emailService.sendPaymentReminderEmail(
           reminder.Email,
           reminder.Username,
           {
             title: reminder.Title,
             amount: reminder.Amount,
-            category: reminder.Category ?? "General",
+            category: reminder.Category ?? "General", // add a fallback if category can be null
             dueDate: reminder.Next_Due_Date,
             daysUntilDue: daysUntilDue
           }
@@ -170,12 +121,10 @@ export class CronService {
       }
 
       console.log(`Payment reminder notification sent for user ${reminder.User_ID}, reminder ${reminder.Reminder_ID}`);
+      
     } catch (error) {
       console.error(`Error processing due reminder ${reminder.Reminder_ID}:`, error);
       throw error;
     }
   }
 }
-
-// Export singleton
-export const getCronService = () => CronService.getInstance();
