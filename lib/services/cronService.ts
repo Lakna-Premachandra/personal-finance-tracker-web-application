@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { connectToDatabase } from '@/lib/database/db';
 import { PaymentReminderService } from './paymentReminderService';
 import { EmailService } from './emailService';
+import { LeaderboardService } from './leaderboardService';
 
 export class CronService {
   private static instance: CronService;
@@ -48,6 +49,18 @@ export class CronService {
       await this.checkAndSendPaymentReminders();
     });
 
+    cron.schedule('0 * * * *', async () => {
+      console.log('Running hourly leaderboard update...');
+      await this.updateLeaderboard();
+    });
+
+    // NEW: Leaderboard updates - also run daily at midnight
+    cron.schedule('0 0 * * *', async () => {
+      console.log('Running daily midnight leaderboard update...');
+      await this.updateLeaderboard();
+    });
+
+
     this.isRunning = true;
     console.log('Cron service started successfully');
   }
@@ -61,7 +74,12 @@ export class CronService {
     return {
       isRunning: this.isRunning,
       lastRun: this.lastRun?.toISOString() || null,
-      service: 'CronService'
+      service: 'CronService',
+      jobs: {
+        birthdayCheck: 'Every hour',
+        paymentReminders: 'Daily at 9AM and every 6 hours',
+        leaderboardUpdate: 'Every hour and daily at midnight'
+      }
     };
   }
 
@@ -173,6 +191,44 @@ export class CronService {
     } catch (error) {
       console.error(`Error processing due reminder ${reminder.Reminder_ID}:`, error);
       throw error;
+    }
+  }
+   // ------------------  Leaderbord Updates ------------------
+
+  public async updateLeaderboard(): Promise<any> {
+    this.lastRun = new Date();
+
+    try {
+      console.log('Starting leaderboard update at:', this.lastRun.toISOString());
+
+      const result = await LeaderboardService.updateLeaderboard();
+
+      if (result.Status === 'SUCCESS') {
+        console.log('Leaderboard update completed successfully:', result.Message);
+        return {
+          success: true,
+          timestamp: this.lastRun.toISOString(),
+          message: result.Message,
+          service: 'LeaderboardUpdate'
+        };
+      } else {
+        console.error('Leaderboard update failed:', result.Message);
+        return {
+          success: false,
+          timestamp: this.lastRun.toISOString(),
+          error: result.Message,
+          service: 'LeaderboardUpdate'
+        };
+      }
+
+    } catch (error) {
+      console.error('Error in leaderboard update:', error);
+      return {
+        success: false,
+        timestamp: this.lastRun.toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        service: 'LeaderboardUpdate'
+      };
     }
   }
 }
