@@ -14,6 +14,8 @@ import { RootState } from "@/components/dashboard-layout"
 import { useState } from "react"
 import CrownPic from '../../../public/crown.png'
 import Image from "next/image"
+import { CheckCircle } from "lucide-react"
+import { useEffect } from "react"
 
 // Map jar levels to display names
 const getJarLevelName = (level: number): string => {
@@ -61,6 +63,8 @@ const getUserInitials = (username: string): string => {
 export default function LeaderboardPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const user = useSelector((state: RootState) => state.auth.user)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [showEligibilityMessage, setShowEligibilityMessage] = useState(false)
   const displayName = user?.username || ''
 
   const {
@@ -84,6 +88,18 @@ export default function LeaderboardPage() {
     isLoading: isPositionLoading
   } = useGetPositionQuery()
 
+  useEffect(() => {
+    if (eligibilityData?.data?.Is_Eligible) {
+      setShowEligibilityMessage(true)
+      const timer = setTimeout(() => {
+        setShowEligibilityMessage(false)
+      }, 3000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [eligibilityData?.data?.Is_Eligible])
+
+
   // Add refresh mutation
   const [refreshLeaderboard, { isLoading: isRefreshing, error: refreshError }] = useRefreshLeaderboardMutation()
 
@@ -91,11 +107,11 @@ export default function LeaderboardPage() {
   const handleRefresh = async () => {
     try {
       await refreshLeaderboard({ action: "refresh" }).unwrap()
+     
     } catch (error) {
       console.error('Failed to refresh leaderboard:', error)
     }
   }
-
   const achievements = [
     {
       title: "First Goal Completed",
@@ -189,6 +205,7 @@ export default function LeaderboardPage() {
     )
   }
 
+
   const leaderboardEntries = leaderboardData?.data || []
   const topThree = leaderboardEntries.slice(0, 3)
   const remainingEntries = leaderboardEntries.slice(3)
@@ -230,15 +247,30 @@ export default function LeaderboardPage() {
 
       {/* Show eligibility status if not eligible */}
       {eligibilityData?.data && !eligibilityData.data.Is_Eligible && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {eligibilityData.data.Progress_Message}
-            You need {eligibilityData.data.Goals_Required - eligibilityData.data.Goals_Completed} more completed goals and jar level {eligibilityData.data.Jar_Level_Required} to be eligible.
+        <Alert className="mb-4 border-red-200 bg-red-50">
+          <AlertCircle color="red" className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            <div className="space-y-1">
+              <p className="font-medium">Leaderboard Eligibility Requirements</p>
+              <p>{eligibilityData.data.Progress_Message}</p>
+              <p className="text-sm">
+                Requirements: <span className="font-medium">{eligibilityData.data.Goals_Required - eligibilityData.data.Goals_Completed} additional completed goals</span> and <span className="font-medium">Jar Level {eligibilityData.data.Jar_Level_Required}</span> to qualify for ranking.
+              </p>
+            </div>
           </AlertDescription>
         </Alert>
       )}
 
+  {
+    showEligibilityMessage && eligibilityData?.data?.Is_Eligible && (
+      <Alert className="mb-4 border-green-200 bg-green-50">
+        <CheckCircle className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-800">
+          You are eligible! Press Refresh button to see updated rankings.
+        </AlertDescription>
+      </Alert>
+    )
+  }
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
