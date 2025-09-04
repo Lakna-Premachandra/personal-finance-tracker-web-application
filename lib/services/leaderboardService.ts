@@ -52,6 +52,7 @@ export class LeaderboardService {
       return result.recordset.map((row: any) => ({
         User_ID: row.User_ID,
         Username: row.Username,
+        ProfilePicture: row.ProfilePicture,
         User_Type: row.User_Type,
         Rank: row.Rank,
         Goals_Completed: row.Goals_Completed,
