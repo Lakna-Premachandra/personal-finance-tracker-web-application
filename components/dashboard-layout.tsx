@@ -25,7 +25,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 
 // Add RootState type
-interface RootState {
+export interface RootState {
   auth: {
     token: string | null
     user: {

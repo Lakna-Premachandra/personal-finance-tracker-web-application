@@ -1,4 +1,6 @@
 // Types
+import { api } from "../baseApi";
+
 interface Jar {
   Jar_ID: number;
   User_ID: number;
@@ -87,7 +89,6 @@ interface MarkSpentRequest {
 
 
 // Jar API with injected endpoints
-import { api } from "../baseApi";
 
 const controller = 'jars';
 
