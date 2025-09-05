@@ -80,7 +80,7 @@ export const profileApi = api.injectEndpoints({
                 url: `${controller}/${id}`,
                 method: 'GET',
             }),
-            providesTags: (result, error, id) => [{ type: 'Profile', id }],
+            providesTags: (result, error, id) => [{ type: 'Profile', id },],
         }),
 
         // POST /api/profile/:id/check-age-transition
@@ -117,7 +117,7 @@ export const profileApi = api.injectEndpoints({
                     body: formData,
                 }
             },
-            invalidatesTags: (result, error, { id }) => [{ type: 'Profile', id }],
+            invalidatesTags: (result, error, { id }) => [{ type: 'Profile', id },'CronCheck','CronStatus'],
         }),
 
 

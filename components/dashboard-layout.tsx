@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { SidebarNav } from "@/components/sidebar-nav"
 import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -14,15 +13,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { useGetCronStatusQuery, useLazyTriggerManualCheckQuery, useStartCronServiceMutation } from "@/services/controllers/cronController"
-import { useGetUserNotificationsQuery, useProcessNotificationMutation } from "@/services/controllers/notificationController"
+import { 
+  useGetUserNotificationsQuery, 
+  useProcessNotificationMutation,
+  useMarkNotificationsAsReadMutation,
+  isAgeTransitionNotification,
+  type Notification 
+} from "@/services/controllers/notificationController"
 import { logout } from "@/store/slices/authSlice"
-import { Bell, LogOut, Menu, PiggyBank, Settings } from "lucide-react"
+import { Bell, LogOut, Menu, PiggyBank, Settings, Clock, Calendar, DollarSign, Gift, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
+import { toast } from "@/components/ui/use-toast"
 
 // Add RootState type
 export interface RootState {
@@ -49,6 +56,7 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openConfirmation, setOpenConfirmation] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [selectedNotifications, setSelectedNotifications] = useState<number[]>([])
   const dispatch = useDispatch()
   const router = useRouter()
 
@@ -56,22 +64,32 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
   const user = useSelector((state: RootState) => state.auth.user)
 
   // Get notifications for the current user with auto-refresh
-  const { data: notificationData, isLoading: notificationsLoading, refetch: refetchNotifications } = useGetUserNotificationsQuery(
+  const { 
+    data: notificationData, 
+    isLoading: notificationsLoading, 
+    refetch: refetchNotifications,
+    error: notificationsError 
+  } = useGetUserNotificationsQuery(
     user?.id || 0,
     { 
       skip: !user?.id,
-      pollingInterval: 30000, // Poll every 30 seconds
       refetchOnFocus: true, // Refetch when window gains focus
       refetchOnReconnect: true // Refetch when network reconnects
     }
   )
-  const [processNotification] = useProcessNotificationMutation()
+
+  // Mutations
+  const [processNotification, { isLoading: isProcessing }] = useProcessNotificationMutation()
+  const [markAsRead, { isLoading: isMarkingRead }] = useMarkNotificationsAsReadMutation()
 
   const notifications = notificationData?.notifications || []
   const unprocessedCount = notifications.filter(n => !n.Is_Processed).length
+  const hasUnprocessedNotifications = notificationData?.hasUnprocessedNotifications || false
 
   // Use username from Redux store, fallback to prop, then to default
   const displayName = user?.username || userName || ''
+  
+  // Cron service queries and mutations
   const { data: status, isLoading } = useGetCronStatusQuery(
     user?.id || 0,
     { skip: !user?.id }
@@ -85,7 +103,7 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
 
     const interval = setInterval(() => {
       refetchNotifications()
-    }, 30000) // 30 seconds
+    }, 2000) // 30 seconds
 
     return () => clearInterval(interval)
   }, [user?.id, refetchNotifications])
@@ -120,11 +138,10 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
     }
   }, [user?.id, startCron, triggerCheck, refetchNotifications])
 
-  // Trigger manual check
+  // Handle logout
   const handleLogout = () => {
     // Dispatch logout action to clear Redux state and localStorage
     dispatch(logout())
-
     // Redirect to login page
     router.push('/login') // or wherever your login page is
   }
@@ -133,22 +150,113 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
     setOpenConfirmation(true)
   }
 
-  const handleNotificationAction = async (notificationId: number, userTypeChoice: string) => {
+  // Handle notification actions (birthday transitions and payment reminders)
+  const handleNotificationAction = async (notificationId: number, userTypeChoice?: string) => {
     if (!user?.id) return
 
     try {
-      await processNotification({
+      const result = await processNotification({
         userId: user.id,
         notificationId,
         userTypeChoice
       }).unwrap()
+
+      // Show success message
+      toast({
+        title: "Success",
+        description: result.message || "Notification processed successfully",
+        variant: "default",
+      })
+
+      // Handle different notification types
+      if (result.notificationType === "birthday" && result.transitionCompleted) {
+        toast({
+          title: "Account Upgraded!",
+          description: result.transitionMessage || `Your account has been upgraded to ${result.newUserType}`,
+          variant: "default",
+        })
+        
+        // Optionally reload the page or update user state
+        // You might want to update the Redux auth state here
+        setTimeout(() => {
+          window.location.reload() // Or handle state update more elegantly
+        }, 2000)
+      }
+
       // Refetch notifications after processing
       await refetchNotifications()
-      // Optionally show success message
-      setNotificationsOpen(false)
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Failed to process notification:', error)
+      toast({
+        title: "Error",
+        description: error?.data?.message || "Failed to process notification",
+        variant: "destructive",
+      })
     }
+  }
+
+  // Mark notifications as read
+  const handleMarkAsRead = async (notificationIds: number[]) => {
+    if (!user?.id || notificationIds.length === 0) return
+
+    try {
+      await markAsRead({
+        userId: user.id,
+        notificationIds
+      }).unwrap()
+
+      toast({
+        title: "Success",
+        description: `Marked ${notificationIds.length} notification(s) as read`,
+        variant: "default",
+      })
+
+      setSelectedNotifications([])
+      await refetchNotifications()
+    } catch (error: any) {
+      console.error('Failed to mark notifications as read:', error)
+      toast({
+        title: "Error",
+        description: error?.data?.message || "Failed to mark notifications as read",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Get notification icon based on type
+  const getNotificationIcon = (notification: Notification) => {
+    if (notification.type === "Birthday" || isAgeTransitionNotification(notification)) {
+      return <Gift className="h-4 w-4 text-yellow-600" />
+    } else if (notification.type === "PaymentReminder") {
+      return <DollarSign className="h-4 w-4 text-red-600" />
+    }
+    return <Bell className="h-4 w-4 text-blue-600" />
+  }
+
+  // Get notification badge color based on type and status
+  const getNotificationBadge = (notification: Notification) => {
+    if (!notification.Is_Processed) {
+      if (notification.type === "Birthday") {
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Birthday</Badge>
+      } else if (notification.type === "PaymentReminder") {
+        return <Badge variant="destructive" className="bg-red-100 text-red-800">Payment Due</Badge>
+      }
+      return <Badge variant="outline">New</Badge>
+    }
+    return <Badge variant="outline" className="opacity-60">Read</Badge>
+  }
+
+  // Format notification date
+  const formatNotificationDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+    
+    if (diffInHours < 1) return "Just now"
+    if (diffInHours < 24) return `${diffInHours}h ago`
+    if (diffInHours < 48) return "Yesterday"
+    return date.toLocaleDateString()
   }
 
   return (
@@ -161,7 +269,6 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
         )}
       >
         <div className="flex h-16 items-center gap-2 border-b px-6 ">
-          {/* <img src="../public/184ed18a-1e6e-46af-8534-c192e71173cb.png" alt="" /> */}
           <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary shadow-lg">
             <PiggyBank className="h-5 w-5 text-white" />
           </div>
@@ -190,52 +297,180 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     {unprocessedCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-danger rounded-full text-xs text-white flex items-center justify-center">
-                        {unprocessedCount}
+                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
+                        {unprocessedCount > 99 ? '99+' : unprocessedCount}
                       </span>
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-80" align="end">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <ScrollArea className="h-64">
+                <DropdownMenuContent className="w-96" align="end" sideOffset={8}>
+                  <div className="flex items-center justify-between p-3 border-b">
+                    <DropdownMenuLabel className="p-0 text-base font-semibold">
+                      Notifications
+                    </DropdownMenuLabel>
+                    <div className="flex items-center gap-2">
+                      {selectedNotifications.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkAsRead(selectedNotifications)}
+                          disabled={isMarkingRead}
+                          className="h-7 px-2 text-xs"
+                        >
+                          {isMarkingRead ? "Marking..." : `Mark ${selectedNotifications.length} as read`}
+                        </Button>
+                      )}
+                      {hasUnprocessedNotifications && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkAsRead(notifications.filter(n => !n.Is_Processed).map(n => n.Notification_ID))}
+                          disabled={isMarkingRead}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Mark all as read
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <ScrollArea className="h-80">
                     {notificationsLoading ? (
-                      <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+                      <div className="p-6 text-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-sm text-muted-foreground mt-2">Loading notifications...</p>
+                      </div>
+                    ) : notificationsError ? (
+                      <div className="p-6 text-center">
+                        <p className="text-sm text-red-600">Failed to load notifications</p>
+                        <Button size="sm" variant="outline" onClick={() => refetchNotifications()} className="mt-2">
+                          Retry
+                        </Button>
+                      </div>
                     ) : notifications.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
+                      <div className="p-6 text-center">
+                        <Bell className="h-12 w-12 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No notifications yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">You'll see important updates here</p>
+                      </div>
                     ) : (
-                      notifications.map((notification) => (
-                        <div key={notification.Notification_ID} className="p-3 border-b last:border-b-0">
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm">{notification.Message}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(notification.Sent_Date).toLocaleDateString()}
-                              </p>
-                            </div>
-                            {!notification.Is_Processed && notification.Message.includes('turned 18') && (
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={() => handleNotificationAction(notification.Notification_ID, 'Student')}
-                                >
-                                  Stay Student
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={() => handleNotificationAction(notification.Notification_ID, 'Young-Adult')}
-                                >
-                                  Upgrade
-                                </Button>
-                              </div>
+                      <div className="p-1">
+                        {notifications.map((notification) => (
+                          <div 
+                            key={notification.Notification_ID} 
+                            className={cn(
+                              "p-3 m-1 rounded-lg border transition-colors hover:bg-muted/50",
+                              !notification.Is_Processed ? "bg-blue-50/50 border-blue-200" : "bg-white border-gray-200"
                             )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 mt-0.5">
+                                {getNotificationIcon(notification)}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    {getNotificationBadge(notification)}
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatNotificationDate(notification.Sent_Date || notification.Created_At || '')}
+                                    </span>
+                                  </div>
+                                  
+                                  {!notification.Is_Processed && (
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedNotifications.includes(notification.Notification_ID)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedNotifications(prev => [...prev, notification.Notification_ID])
+                                        } else {
+                                          setSelectedNotifications(prev => prev.filter(id => id !== notification.Notification_ID))
+                                        }
+                                      }}
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                  )}
+                                </div>
+
+                                <p className="text-sm mb-2 leading-relaxed">{notification.Message}</p>
+
+                                {/* Payment reminder specific info */}
+                                {notification.type === "PaymentReminder" && (
+                                  <div className="bg-red-50 p-2 rounded text-xs mb-2">
+                                    <div className="flex items-center gap-2 text-red-800">
+                                      <DollarSign className="h-3 w-3" />
+                                      <span className="font-medium">{notification.Title}</span>
+                                    </div>
+                                    {notification.Amount && (
+                                      <p className="mt-1 text-red-700">Amount: ${notification.Amount}</p>
+                                    )}
+                                    {notification.Due_Date && (
+                                      <p className="text-red-700 flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        Due: {new Date(notification.Due_Date).toLocaleDateString()}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Action buttons for unprocessed notifications */}
+                                {!notification.Is_Processed && (
+                                  <div className="flex gap-2 mt-3">
+                                    {/* Birthday transition actions */}
+                                    {isAgeTransitionNotification(notification) && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-3 text-xs"
+                                          onClick={() => handleNotificationAction(notification.Notification_ID, 'Student')}
+                                          disabled={isProcessing}
+                                        >
+                                          Stay Student
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          className="h-7 px-3 text-xs bg-primary text-white hover:bg-primary/90"
+                                          onClick={() => handleNotificationAction(notification.Notification_ID, 'Young-Adult')}
+                                          disabled={isProcessing}
+                                        >
+                                          {isProcessing ? "Processing..." : "Upgrade to Adult"}
+                                        </Button>
+                                      </>
+                                    )}
+
+                                    {/* Payment reminder actions */}
+                                    {notification.type === "PaymentReminder" && (
+                                      <Button
+                                        size="sm"
+                                        className="h-7 px-3 text-xs"
+                                        onClick={() => handleNotificationAction(notification.Notification_ID)}
+                                        disabled={isProcessing}
+                                      >
+                                        {isProcessing ? "Processing..." : "Mark as Paid"}
+                                      </Button>
+                                    )}
+
+                                    {/* Generic dismiss action */}
+                                    {!isAgeTransitionNotification(notification) && notification.type !== "PaymentReminder" && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 px-3 text-xs"
+                                        onClick={() => handleNotificationAction(notification.Notification_ID)}
+                                        disabled={isProcessing}
+                                      >
+                                        {isProcessing ? "Processing..." : "Dismiss"}
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </ScrollArea>
                 </DropdownMenuContent>
@@ -245,7 +480,6 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-gray-100">
                     <Avatar className="h-10 w-10 border-2 border-gray-300 flex bg-primary text-white  items-center justify-center">
-                   
                       <AvatarImage src={
                         user?.profilePicture ||
                         `https://ui-avatars.com/api/?name=${displayName}&background=random`
@@ -263,7 +497,7 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem >
+                  <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
                     <Link href={'/young-adult/settings'} className="text-sm font-medium">
                       Settings

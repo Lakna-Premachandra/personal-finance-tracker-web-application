@@ -23,6 +23,7 @@ export const api = createApi({
   tagTypes: ['User', 'Goal', 'Transaction', 'Budget', 'Category', 'MonthlySummary', 'Profile', 'CronStatus', 'ManualCheck', 'CronLogs', 'NotificationStats', 'UnprocessedNotifications', 'Notifications', 'UserNotifications', 'UserProfile', 'CronCheck', 'CronSchedule', 'Jar',
     'JarStats',
     'JarHistory',
-    "Leaderboard"], // Add more as needed
+    "Leaderboard",
+    'PaymentReminder', 'PaymentReminderStats', 'PaymentNotification'], // Add more as needed
   endpoints: () => ({}),
 })

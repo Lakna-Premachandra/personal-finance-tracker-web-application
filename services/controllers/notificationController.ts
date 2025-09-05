@@ -5,13 +5,21 @@ const controller = 'notifications'
 // Interfaces based on your API responses
 export interface Notification {
   Notification_ID: number
-  User_ID: number
-  Notification_Date: string
-  Sent_Date: string
+  User_ID?: number
+  Notification_Date?: string
+  Sent_Date?: string
   Is_Processed: boolean
-  Age: number
-  Type: string
+  Age?: number
+  Type?: string
   Message: string
+  type: "Birthday" | "PaymentReminder"
+  
+  // Payment reminder specific fields
+  Reminder_ID?: number
+  Title?: string
+  Due_Date?: string
+  Amount?: number
+  Created_At?: string
 }
 
 export interface GetUserNotificationsResponse {
@@ -23,18 +31,24 @@ export interface GetUserNotificationsResponse {
 export interface ProcessNotificationRequest {
   userId: number
   notificationId: number
-  userTypeChoice: string
+  userTypeChoice?: string // Optional for payment reminders
 }
 
 export interface ProcessNotificationResponse {
   success: boolean
   message: string
   notificationProcessed: boolean
-  transitionCompleted: boolean
-  newUserType: string
-  transitionMessage: string
-  currentUserType: string
-  currentAge: number
+  notificationType: "birthday" | "payment_reminder"
+  
+  // Birthday notification specific fields
+  transitionCompleted?: boolean
+  newUserType?: string
+  transitionMessage?: string
+  currentUserType?: string
+  currentAge?: number
+  
+  // Payment reminder specific fields
+  rowsAffected?: number
 }
 
 export interface TransformedUserNotifications {
@@ -98,6 +112,7 @@ export const notificationsApi = api.injectEndpoints({
         transitionMessage: response.transitionMessage,
         currentUserType: response.currentUserType,
         currentAge: response.currentAge,
+        notificationType: "birthday"
       }),
     }),
 
@@ -199,7 +214,7 @@ export const isAgeTransitionNotification = (notification: Notification): boolean
 }
 
 export const getUserTypeFromNotification = (notification: Notification): string | null => {
-  if (notification.Type === 'Student' && notification.Age >= 18) {
+  if (notification.Type === 'Student' && notification?.Age! >= 18) {
     return 'Young-Adult'
   }
   return null
