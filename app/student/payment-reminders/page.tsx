@@ -1,6 +1,6 @@
 "use client"
-
-import { useState } from "react"
+//student payment reminders page
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Bell,
   Plus,
-  CalendarIcon,
+  Calendar as CalendarIcon,
   Clock,
   DollarSign,
   Edit,
@@ -29,107 +29,332 @@ import {
   CheckCircle,
   AlertCircle,
   Smartphone,
-  Wifi,
   Book,
   Car,
+  CreditCard,
+  ShoppingBag,
+  Gamepad2,
 } from "lucide-react"
-import { format } from "date-fns"
+import {
+  CreatePaymentReminderRequest,
+  PaymentReminder,
+  UpdatePaymentReminderRequest,
+  useCreatePaymentReminderMutation,
+  useDeletePaymentReminderMutation,
+  useGetPaymentRemindersQuery,
+  useGetPaymentReminderStatsQuery,
+  useMarkPaymentPaidMutation,
+  useUpdatePaymentReminderMutation
+} from "@/services/controllers/paymentRemindersController"
 import { useCurrency } from "@/hooks/useCurrency"
+import { ref } from "process"
+
+// Category icons mapping
+const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  Utilities: Smartphone,
+  Education: Book,
+  Transportation: Car,
+  Entertainment: Gamepad2,
+  Food: ShoppingBag,
+  Other: CreditCard,
+  utilities: Smartphone,
+  education: Book,
+  transportation: Car,
+  entertainment: Gamepad2,
+  food: ShoppingBag,
+  other: CreditCard,
+}
+
+// Category colors mapping
+const categoryColors: Record<string, string> = {
+  Utilities: "bg-blue-500",
+  Education: "bg-purple-500",
+  Transportation: "bg-orange-500",
+  Entertainment: "bg-green-500",
+  Food: "bg-yellow-500",
+  Other: "bg-gray-500",
+  utilities: "bg-blue-500",
+  education: "bg-purple-500",
+  transportation: "bg-orange-500",
+  entertainment: "bg-green-500",
+  food: "bg-yellow-500",
+  other: "bg-gray-500",
+}
+
+
+const format = (date: Date, formatString: string) => {
+  if (formatString === "yyyy-MM-dd") {
+    // Use local timezone to avoid date shifting
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } else if (formatString === "PPP") {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } else if (formatString === "MMM dd, yyyy") {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  return date.toLocaleDateString();
+}
+
+// Mock toast function
+const toast = {
+  success: (message: string) => console.log("Success:", message),
+  error: (message: string) => console.error("Error:", message)
+}
 
 export default function PaymentRemindersPage() {
   const { formatCurrency, getCurrencySymbol } = useCurrency();
 
-  const [date, setDate] = useState<Date>()
-  const [newReminder, setNewReminder] = useState({
+  // RTK Query hooks
+  const {
+    data: remindersResponse,
+    isLoading: isLoadingReminders,
+    error: remindersError,
+    refetch: refetchReminders
+  } = useGetPaymentRemindersQuery();
+
+  const {
+    data: statsResponse,
+    isLoading: isLoadingStats,
+    error: statsError,
+    refetch: refetchStats
+  } = useGetPaymentReminderStatsQuery();
+
+  const [createReminder, { isLoading: isCreating }] = useCreatePaymentReminderMutation();
+  const [updateReminder, { isLoading: isUpdating }] = useUpdatePaymentReminderMutation();
+  const [deleteReminder, { isLoading: isDeleting }] = useDeletePaymentReminderMutation();
+  const [markPaid] = useMarkPaymentPaidMutation();
+
+  // Local state
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<PaymentReminder | null>(null);
+  const [newReminder, setNewReminder] = useState<CreatePaymentReminderRequest>({
     title: "",
-    amount: "",
+    amount: 0,
     dueDate: "",
     category: "",
     frequency: "monthly",
-    reminderDays: "3",
-    isActive: true,
-  })
+    remindDaysBefore: 3,
+    isEnabled: true,
+  });
 
-  const reminders = [
-    {
-      id: 1,
-      title: "Phone Bill",
-      amount: 45,
-      dueDate: "2024-02-15",
-      category: "Utilities",
-      frequency: "monthly",
-      reminderDays: 3,
-      isActive: true,
-      status: "upcoming",
-      icon: Smartphone,
-      color: "from-blue-500 to-cyan-500",
-    },
-    {
-      id: 2,
-      title: "Internet Subscription",
-      amount: 29.99,
-      dueDate: "2024-02-20",
-      category: "Utilities",
-      frequency: "monthly",
-      reminderDays: 5,
-      isActive: true,
-      status: "upcoming",
-      icon: Wifi,
-      color: "from-green-500 to-emerald-500",
-    },
-    {
-      id: 3,
-      title: "School Supplies",
-      amount: 75,
-      dueDate: "2024-02-10",
-      category: "Education",
-      frequency: "monthly",
-      reminderDays: 2,
-      isActive: true,
-      status: "overdue",
-      icon: Book,
-      color: "from-purple-500 to-pink-500",
-    },
-    {
-      id: 4,
-      title: "Bus Pass",
-      amount: 25,
-      dueDate: "2024-02-25",
-      category: "Transportation",
-      frequency: "monthly",
-      reminderDays: 7,
-      isActive: false,
-      status: "upcoming",
-      icon: Car,
-      color: "from-orange-500 to-red-500",
-    },
-  ]
+  // Extract data from responses
+  const reminders = remindersResponse?.data || [];
+  const stats = statsResponse?.data || {
+    activeReminders: 0,
+    upcomingReminders: 0,
+    overdueReminders: 0,
+    totalAmount: 0
+  };
 
-  const upcomingReminders = reminders.filter((r) => r.status === "upcoming" && r.isActive)
-  const overdueReminders = reminders.filter((r) => r.status === "overdue" && r.isActive)
-  const totalMonthlyPayments = reminders
-    .filter((r) => r.isActive && r.frequency === "monthly")
-    .reduce((sum, r) => sum + r.amount, 0)
+  console.log('Reminders:', reminders);
+
+  const isLoading = isLoadingReminders || isLoadingStats;
+  const error = remindersError || statsError;
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setNewReminder({
+        title: "",
+        amount: 0,
+        dueDate: "",
+        category: "",
+        frequency: "monthly",
+        remindDaysBefore: 3,
+        isEnabled: true,
+      });
+      setDate(undefined);
+      setEditingReminder(null);
+    }
+  }, [isDialogOpen]);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingReminder) {
+      setNewReminder({
+        title: editingReminder.Title,
+        amount: editingReminder.Amount,
+        dueDate: editingReminder.Due_Date,
+        category: editingReminder.Category,
+        frequency: editingReminder.Frequency,
+        remindDaysBefore: editingReminder.Remind_Days_Before as 1 | 3 | 5 | 7,
+        isEnabled: editingReminder.Is_Enabled,
+      });
+      setDate(new Date(editingReminder.Due_Date));
+      setIsDialogOpen(true);
+    }
+  }, [editingReminder]);
+
+  // Filter for overdue reminders - only show ENABLED overdue reminders in the special section
+  const overdueReminders = reminders.filter((r) => r.Status === "overdue" && r.Is_Enabled);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "upcoming":
-        return "bg-blue-100 text-blue-700 border-blue-200"
+      case "scheduled":
+        return "bg-blue-100 text-blue-700 border-blue-200";
       case "overdue":
-        return "bg-red-100 text-red-700 border-red-200"
-      case "paid":
-        return "bg-green-100 text-green-700 border-green-200"
+        return "bg-red-100 text-red-700 border-red-200";
+      case "complete":
+        return "bg-green-100 text-green-700 border-green-200";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-200"
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
-  }
+  };
 
   const getDaysUntilDue = (dueDate: string) => {
-    const today = new Date()
-    const due = new Date(dueDate)
-    const diffTime = due.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
+    if (!dueDate) return 0;
+    const today = new Date();
+    const due = new Date(dueDate);
+    if (isNaN(due.getTime())) return 0;
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const handleCreateOrUpdate = async () => {
+    try {
+      if (!date) {
+        toast.error("Please select a due date");
+        return;
+      }
+
+      if (!newReminder.title || !newReminder.amount || !newReminder.category) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      const reminderData: CreatePaymentReminderRequest | UpdatePaymentReminderRequest = {
+        title: newReminder.title,
+        amount: newReminder.amount,
+        category: newReminder.category.charAt(0).toUpperCase() + newReminder.category.slice(1),
+        dueDate: format(date, "yyyy-MM-dd"),
+        remindDaysBefore: newReminder.remindDaysBefore,
+        frequency: newReminder.frequency,
+        isEnabled: newReminder.isEnabled,
+      };
+
+      if (editingReminder) {
+        // Update existing reminder
+        const result = await updateReminder({
+          id: editingReminder.Reminder_ID,
+          data: reminderData as UpdatePaymentReminderRequest
+        }).unwrap();
+
+        if (result.success) {
+          toast.success(result.message || "Payment reminder updated successfully!");
+          setIsDialogOpen(false);
+          refetchReminders();
+          refetchStats();
+        }
+      } else {
+        // Create new reminder
+        const result = await createReminder(reminderData as CreatePaymentReminderRequest).unwrap();
+
+        if (result.success) {
+          toast.success(result.message || "Payment reminder created successfully!");
+          setIsDialogOpen(false);
+          refetchReminders();
+          refetchStats();
+        }
+      }
+    } catch (error: any) {
+      console.error('Error creating/updating reminder:', error);
+      toast.error(error?.data?.message || error?.message || "An error occurred");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const result = await deleteReminder(id).unwrap();
+
+      if (result.success) {
+        toast.success(result.message || "Payment reminder deleted successfully!");
+        refetchReminders();
+        refetchStats();
+
+      }
+    } catch (error: any) {
+      console.error('Error deleting reminder:', error);
+      toast.error(error?.data?.message || error?.message || "Failed to delete reminder");
+    }
+  };
+
+  const handleMarkPaid = async (id: number, title: string) => {
+    try {
+      const result = await markPaid({
+        id,
+        data: {
+          paymentDate: format(new Date(), "yyyy-MM-dd"),
+          description: `Payment for ${title}`
+        }
+      }).unwrap();
+
+      if (result.success) {
+        toast.success(result.message || "Payment marked as paid!");
+        refetchReminders();
+        refetchStats();
+
+      }
+    } catch (error: any) {
+      console.error('Error marking payment as paid:', error);
+      toast.error(error?.data?.message || error?.message || "Failed to mark payment as paid");
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    return categoryIcons[category] || CreditCard;
+  };
+
+  const getCategoryColor = (category: string) => {
+    return categoryColors[category] || "from-gray-500 to-slate-500";
+  };
+
+  const handleRetry = () => {
+    refetchReminders();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading payment reminders...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-2">Failed to load payment reminders</p>
+            <p className="text-sm text-gray-500 mb-4">
+              {(error as any)?.data?.message || (error as any)?.message || 'Unknown error occurred'}
+            </p>
+            <Button onClick={handleRetry} className="bg-blue-600 hover:bg-blue-700">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -141,17 +366,19 @@ export default function PaymentRemindersPage() {
           </h1>
           <p className="text-muted-foreground">Never miss a payment with smart reminders</p>
         </div>
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
+            <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="mr-2 h-4 w-4" />
               Add Reminder
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Payment Reminder</DialogTitle>
-              <DialogDescription>Set up a new reminder for your recurring payments.</DialogDescription>
+              <DialogTitle>{editingReminder ? "Edit Payment Reminder" : "Create Payment Reminder"}</DialogTitle>
+              <DialogDescription>
+                {editingReminder ? "Update your payment reminder details." : "Set up a new reminder for your recurring payments."}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -169,9 +396,10 @@ export default function PaymentRemindersPage() {
                   <Input
                     id="amount"
                     type="number"
+                    step="0.01"
                     placeholder="45.00"
-                    value={newReminder.amount}
-                    onChange={(e) => setNewReminder({ ...newReminder, amount: e.target.value })}
+                    value={newReminder.amount || ""}
+                    onChange={(e) => setNewReminder({ ...newReminder, amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
                 <div>
@@ -184,12 +412,12 @@ export default function PaymentRemindersPage() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="transportation">Transportation</SelectItem>
-                      <SelectItem value="entertainment">Entertainment</SelectItem>
-                      <SelectItem value="food">Food</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="Utilities">Utilities</SelectItem>
+                      <SelectItem value="Education">Education</SelectItem>
+                      <SelectItem value="Transportation">Transportation</SelectItem>
+                      <SelectItem value="Entertainment">Entertainment</SelectItem>
+                      <SelectItem value="Food">Food</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -213,7 +441,7 @@ export default function PaymentRemindersPage() {
                   <Label htmlFor="frequency">Frequency</Label>
                   <Select
                     value={newReminder.frequency}
-                    onValueChange={(value) => setNewReminder({ ...newReminder, frequency: value })}
+                    onValueChange={(value) => setNewReminder({ ...newReminder, frequency: value as "monthly" | "quarterly" | "weekly" | "yearly" })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -229,8 +457,8 @@ export default function PaymentRemindersPage() {
                 <div>
                   <Label htmlFor="reminderDays">Remind me (days before)</Label>
                   <Select
-                    value={newReminder.reminderDays}
-                    onValueChange={(value) => setNewReminder({ ...newReminder, reminderDays: value })}
+                    value={newReminder.remindDaysBefore.toString()}
+                    onValueChange={(value) => setNewReminder({ ...newReminder, remindDaysBefore: parseInt(value) as 1 | 3 | 5 | 7 })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -247,13 +475,17 @@ export default function PaymentRemindersPage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
-                  checked={newReminder.isActive}
-                  onCheckedChange={(checked) => setNewReminder({ ...newReminder, isActive: checked })}
+                  checked={newReminder.isEnabled}
+                  onCheckedChange={(checked) => setNewReminder({ ...newReminder, isEnabled: checked })}
                 />
                 <Label htmlFor="isActive">Enable reminder</Label>
               </div>
-              <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
-                Create Reminder
+              <Button
+                onClick={handleCreateOrUpdate}
+                disabled={isCreating || isUpdating}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {(isCreating || isUpdating) ? "Saving..." : editingReminder ? "Update Reminder" : "Create Reminder"}
               </Button>
             </div>
           </DialogContent>
@@ -262,52 +494,60 @@ export default function PaymentRemindersPage() {
 
       {/* Overview Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Reminders</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-600">Active Reminders</CardTitle>
             <Bell className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700">{reminders.filter((r) => r.isActive).length}</div>
+            <div className="text-2xl font-bold text-blue-700">
+              {stats.activeReminders}
+            </div>
             <p className="text-xs text-blue-600">Currently tracking</p>
           </CardContent>
         </Card>
 
-        <Card className="">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
+            <CardTitle className="text-sm font-medium text-orange-600">Upcoming</CardTitle>
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-700">{upcomingReminders.length}</div>
+            <div className="text-2xl font-bold text-orange-700">
+              {stats.upcomingReminders}
+            </div>
             <p className="text-xs text-orange-600">Due soon</p>
           </CardContent>
         </Card>
 
-        <Card className="">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <CardTitle className="text-sm font-medium text-red-600">Overdue</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-700">{overdueReminders.length}</div>
+            <div className="text-2xl font-bold text-red-700">
+              {stats.overdueReminders}
+            </div>
             <p className="text-xs text-red-600">Need attention</p>
           </CardContent>
         </Card>
 
-        <Card className="">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Total</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-600">Monthly Total</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-700">{getCurrencySymbol()}{totalMonthlyPayments}</div>
-            <p className="text-xs text-green-600">Per month</p>
+            <div className="text-2xl font-bold text-green-700">
+              {getCurrencySymbol()}{(stats.totalAmount || 0).toFixed(2)}
+            </div>
+            <p className="text-xs text-green-600">Total amount</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Overdue Reminders */}
+      {/* Overdue Reminders - Only show ENABLED overdue reminders here */}
       {overdueReminders.length > 0 && (
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
@@ -319,98 +559,171 @@ export default function PaymentRemindersPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {overdueReminders.map((reminder) => (
-                <div
-                  key={reminder.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg bg-gradient-to-r ${reminder.color} text-white`}>
-                      <reminder.icon className="h-4 w-4" />
+              {overdueReminders.map((reminder) => {
+                const IconComponent = getCategoryIcon(reminder.Category);
+                return (
+                  <div
+                    key={reminder.Reminder_ID}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-r ${getCategoryColor(reminder.Category)} text-white`}>
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{reminder.Title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Due: {format(new Date(reminder.Due_Date), "MMM dd, yyyy")} •{" "}
+                          {Math.abs(getDaysUntilDue(reminder.Due_Date))} days overdue
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">{reminder.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Due: {format(new Date(reminder.dueDate), "MMM dd, yyyy")} •
-                        {Math.abs(getDaysUntilDue(reminder.dueDate))} days overdue
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right flex gap-2 items-center">
+                        <div className="font-semibold">{getCurrencySymbol()}{reminder.Amount.toFixed(2)}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-green-500 hover:bg-green-600"
+                        onClick={() => handleMarkPaid(reminder.Reminder_ID, reminder.Title)}
+                        disabled={isDeleting}
+                      >
+                        <CheckCircle className="mr-1 h-3 w-3" />
+                        Mark Paid
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      <div className="font-semibold">{getCurrencySymbol()}{reminder.amount}</div>
-                      <Badge className={getStatusColor(reminder.status)}>Overdue</Badge>
-                    </div>
-                    <Button size="sm" className="bg-green-500 hover:bg-green-600">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      Mark Paid
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* All Reminders */}
+      {/* All Reminders - Show ALL reminders but style disabled ones differently */}
       <Card>
         <CardHeader>
           <CardTitle>All Payment Reminders</CardTitle>
           <CardDescription>Manage your recurring payment reminders</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {reminders.map((reminder) => (
-              <div
-                key={reminder.id}
-                className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${reminder.isActive ? "hover:bg-gray-50" : "opacity-60 bg-gray-50"
-                  }`}
+          {reminders.length === 0 ? (
+            <div className="text-center py-8">
+              <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No payment reminders yet</h3>
+              <p className="text-gray-500 mb-4">Create your first payment reminder to get started</p>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-lg bg-gradient-to-r ${reminder.color} text-white`}>
-                    <reminder.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{reminder.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {reminder.category}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {reminder.frequency}
-                      </Badge>
-                      <Badge className={getStatusColor(reminder.status)}>{reminder.status}</Badge>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Your First Reminder
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reminders.map((reminder) => {
+                const IconComponent = getCategoryIcon(reminder.Category);
+                const isDisabled = !reminder.Is_Enabled;
+
+                return (
+                  <div
+                    key={reminder.Reminder_ID}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isDisabled
+                        ? "bg-gray-100 border-gray-300 opacity-75" // Light gray styling for disabled reminders
+                        : "hover:bg-gray-50 border-gray-200"
+                      }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-lg ${isDisabled
+                          ? "bg-gray-400 text-white" // Gray icon for disabled reminders
+                          : `bg-gradient-to-r ${getCategoryColor(reminder.Category)} text-white`
+                        }`}>
+                        <IconComponent className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className={`font-semibold ${isDisabled ? "text-gray-500" : "text-gray-900"}`}>
+                          {reminder.Title}
+                          {isDisabled && <span className="ml-2 text-xs text-gray-400">(Disabled)</span>}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className={`text-xs ${isDisabled
+                              ? "bg-gray-300 text-gray-600"
+                              : "bg-primary-500"
+                            }`}>
+                            {reminder.Category}
+                          </Badge>
+                          <Badge variant="outline" className={`text-xs ${isDisabled ? "border-gray-300 text-gray-500" : ""
+                            }`}>
+                            {reminder.Frequency}
+                          </Badge>
+                          <Badge className={`${isDisabled
+                              ? "bg-gray-200 text-gray-600 border-gray-300"
+                              : getStatusColor(reminder.Status)
+                            }`}>
+                            {reminder.Status}
+                          </Badge>
+                        </div>
+                        <p className={`text-sm mt-1 ${isDisabled ? "text-gray-400" : "text-muted-foreground"
+                          }`}>
+                          {reminder.Due_Date && !isNaN(new Date(reminder.Due_Date).getTime()) ? (
+                            <>
+                              Due: {format(new Date(reminder.Due_Date), "MMM dd, yyyy")} • Remind{" "}
+                              {reminder.Remind_Days_Before} days before
+                            </>
+                          ) : (
+                            "No due date"
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Due: {format(new Date(reminder.dueDate), "MMM dd, yyyy")} • Remind {reminder.reminderDays} days
-                      before
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-lg font-bold">{getCurrencySymbol()}{reminder.amount}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {getDaysUntilDue(reminder.dueDate) > 0
-                        ? `${getDaysUntilDue(reminder.dueDate)} days left`
-                        : `${Math.abs(getDaysUntilDue(reminder.dueDate))} days overdue`}
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className={`text-lg font-bold ${isDisabled ? "text-gray-500" : "text-gray-900"
+                          }`}>
+                          {getCurrencySymbol()}{reminder.Amount}
+                        </div>
+                        <div className={`text-sm ${isDisabled ? "text-gray-400" : "text-muted-foreground"
+                          }`}>
+                          {getDaysUntilDue(reminder.Due_Date) > 0
+                            ? `${getDaysUntilDue(reminder.Due_Date)} days left`
+                            : `${Math.abs(getDaysUntilDue(reminder.Due_Date))} days overdue`}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-8 w-8 ${isDisabled
+                              ? "text-gray-400 hover:text-gray-600"
+                              : "text-gray-600 hover:text-gray-900"
+                            }`}
+                          onClick={() => setEditingReminder(reminder)}
+                          disabled={isDeleting}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-8 w-8 ${isDisabled
+                              ? "text-gray-400 hover:text-red-500"
+                              : "text-red-500 hover:text-red-700"
+                            }`}
+                          onClick={() => handleDelete(reminder.Reminder_ID)}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
