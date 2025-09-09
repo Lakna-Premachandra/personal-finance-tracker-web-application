@@ -11,6 +11,7 @@ import Link from "next/link"
 import type React from "react"
 import { useState } from "react"
 import { toast } from "sonner"
+import { UserFactory } from "../register/useFactory"
 
 interface ValidationErrors {
   employmentStatus?: string
@@ -135,49 +136,34 @@ export default function RegisterPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Clear previous errors
-    setErrors({})
-
-    // Validate form
-    if (!validateForm()) return
-
+    e.preventDefault();
+  
+    setErrors({});
+  
+    if (!validateForm()) return;
+  
     try {
-      const userType = getUserType(formData.dateOfBirth)
-      const age = calculateAge(formData.dateOfBirth)
-
-      // Validate that userType is not null before sending
-      if (!userType) {
-        setErrors({ dateOfBirth: "Invalid age range. Must be between 12-25 years." })
-        return
+      const age = calculateAge(formData.dateOfBirth);
+  
+      // Use Factory to create the correct user object
+      const userPayload = UserFactory.createUser(formData, age);
+  
+      if (!userPayload) {
+        setErrors({
+          dateOfBirth: "Invalid age range. Must be between 12-25 years.",
+        });
+        return;
       }
-
-      // Prepare payload for API
-      const payload = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        dateOfBirth: formData.dateOfBirth,
-        age: age, // Add the calculated age
-        phoneNo: formData.phoneNo || undefined,
-        guardianContactNo: userType === "Student" ? formData.guardianContactNo || undefined : undefined,
-        employmentStatus: userType === "Young-Adult" ? formData.employmentStatus || "Unemployed" : undefined,
-        address: formData.address || undefined,
-        type: userType, // This will be either "Student" or "Young-Adult"
-      }
-
-      console.log("Sending registration payload:", payload)
-
-      // Make API call
-      const response = await registerUser(payload).unwrap()
-
-      // Show success toast
+  
+      console.log("Factory created user:", userPayload);
+  
+      const response = await registerUser(userPayload).unwrap();
+  
       toast.success("Registration Successful!", {
-        description: "Your account has been created successfully. You can now sign in.",
-      })
-
+        description:
+          "Your account has been created successfully. You can now sign in.",
+      });
+  
       // Clear form data after successful registration
       setFormData({
         employmentStatus: "",
@@ -189,38 +175,33 @@ export default function RegisterPage() {
         confirmPassword: "",
         phoneNo: "",
         address: "",
-      })
-
-      // Optional: Redirect to login page after a short delay
-      // setTimeout(() => {
-      //   router.push('/login')
-      // }, 2000)
-
+      });
+  
+      // Optional redirect
+      // setTimeout(() => router.push("/login"), 2000);
     } catch (error: any) {
-      // Handle different types of errors
-      let errorMessage = "Registration failed. Please try again later."
-      
+      let errorMessage = "Registration failed. Please try again later.";
+  
       if (error?.data?.message) {
-        errorMessage = error.data.message
+        errorMessage = error.data.message;
       } else if (error?.data?.errors) {
-        // Handle validation errors from backend
         if (Array.isArray(error.data.errors)) {
-          errorMessage = error.data.errors.join(", ")
+          errorMessage = error.data.errors.join(", ");
         } else {
-          setErrors(error.data.errors)
-          errorMessage = "Please check the form for errors."
+          setErrors(error.data.errors);
+          errorMessage = "Please check the form for errors.";
         }
       } else if (error?.message) {
-        errorMessage = error.message
+        errorMessage = error.message;
       }
-
+  
       // Show error toast
       toast.error("Registration Failed", {
         description: errorMessage,
-      })
+      });
     }
-  }
-
+  };  
+  
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData({ ...formData, [field]: value })
     // Clear field-specific error when user starts typing
