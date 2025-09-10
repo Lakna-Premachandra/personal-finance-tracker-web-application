@@ -147,7 +147,7 @@ export default function MoneyJarPage() {
     }
   }
   // Mock completed jars for demonstration - replace with actual data
-  
+
 
   // Handle API errors
   useEffect(() => {
@@ -227,10 +227,12 @@ export default function MoneyJarPage() {
   // Loading states
   if (isLoadingCurrentJar) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-secondary-600">Loading your money jar...</p>
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+            <PiggyBank className="h-10 w-10 text-gray-500" />
+          </div>
+          <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
         </div>
       </div>
     )
@@ -418,7 +420,7 @@ export default function MoneyJarPage() {
           </Card>
         </div>
 
-      
+
       </div>
     )
   }

@@ -148,7 +148,7 @@ export const goalsApi = api.injectEndpoints({
                 method: 'POST',
                 body: data,
             }),
-            invalidatesTags: (result, error, { id }) => [{ type: 'Goal', id }, 'Goal'],
+            invalidatesTags: (result, error, { id }) => [{ type: 'Goal', id }, 'Goal','Dashboard'],
         }),
         // POST /api/goals/[id]/mark-spent
         markGoalAsSpent: builder.mutation<MarkSpentResponse, number>({

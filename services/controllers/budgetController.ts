@@ -117,7 +117,7 @@ export const budgetsApi = api.injectEndpoints({
         method: 'POST',
         body: budgetData,
       }),
-      invalidatesTags: ['Budget'],
+      invalidatesTags: ['Budget','Dashboard'],
     }),
 
     // GET BY ID - Get budget by ID
