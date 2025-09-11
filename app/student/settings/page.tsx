@@ -22,6 +22,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  PiggyBank,
   Trash2,
   User
 } from "lucide-react"
@@ -271,9 +272,13 @@ export default function SettingsPage() {
   // Loading state
   if (profileLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading profile...</span>
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+            <PiggyBank className="h-10 w-10 text-gray-500" />
+          </div>
+          <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
+        </div>
       </div>
     )
   }

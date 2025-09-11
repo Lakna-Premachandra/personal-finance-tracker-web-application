@@ -32,7 +32,7 @@ export function ExpensePieChart({ data, title }: ExpensePieChartProps) {
     if (percent < 0.08) return null
 
     const RADIAN = Math.PI / 180
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.7
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.3
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
 

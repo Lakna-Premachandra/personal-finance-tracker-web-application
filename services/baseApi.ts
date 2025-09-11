@@ -24,6 +24,7 @@ export const api = createApi({
     'JarStats',
     'JarHistory',
     "Leaderboard",
-    'PaymentReminder', 'PaymentReminderStats', 'PaymentNotification'], // Add more as needed
+    'PaymentReminder', 'PaymentReminderStats', 'PaymentNotification', 'Dashboard', 'Student',
+    'YoungAdult'], // Add more as needed
   endpoints: () => ({}),
 })

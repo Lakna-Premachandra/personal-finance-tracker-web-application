@@ -29,7 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { TransactionCalendar } from "@/components/transaction-calendar"
 import { TransactionList } from "@/components/transaction-list"
 import { ExportDialog } from "@/components/export-dialog"
-import { Plus, CalendarIcon, ArrowUpRight, ArrowDownRight, CalendarIcon as CalendarViewIcon, List, Target } from "lucide-react"
+import { Plus, CalendarIcon, ArrowUpRight, ArrowDownRight, CalendarIcon as CalendarViewIcon, List, Target, PiggyBank } from "lucide-react"
 import { format } from "date-fns"
 import { useGetCategoriesByTypeAndUserTypeQuery } from "@/services/controllers/categoryController"
 import {
@@ -275,6 +275,19 @@ export default function TransactionsPage() {
       })
     }
   }
+ 
+    if (isTransactionsLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="relative">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+              <PiggyBank className="h-10 w-10 text-gray-500" />
+            </div>
+            <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
+          </div>
+        </div>
+      )
+    }
 
   return (
     <div className="space-y-6">

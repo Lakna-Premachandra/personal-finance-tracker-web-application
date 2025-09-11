@@ -34,6 +34,7 @@ import {
   CreditCard,
   ShoppingBag,
   Gamepad2,
+  PiggyBank,
 } from "lucide-react"
 import {
   CreatePaymentReminderRequest,
@@ -327,12 +328,20 @@ export default function PaymentRemindersPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading payment reminders...</p>
+      // <div className="space-y-6">
+      //   <div className="flex items-center justify-center min-h-[400px]">
+      //     <div className="text-center">
+      //       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      //       <p className="text-muted-foreground">Loading payment reminders...</p>
+      //     </div>
+      //   </div>
+      // </div>
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+            <PiggyBank className="h-10 w-10 text-gray-500" />
           </div>
+          <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
         </div>
       </div>
     );
@@ -630,14 +639,14 @@ export default function PaymentRemindersPage() {
                   <div
                     key={reminder.Reminder_ID}
                     className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isDisabled
-                        ? "bg-gray-100 border-gray-300 opacity-75" // Light gray styling for disabled reminders
-                        : "hover:bg-gray-50 border-gray-200"
+                      ? "bg-gray-100 border-gray-300 opacity-75" // Light gray styling for disabled reminders
+                      : "hover:bg-gray-50 border-gray-200"
                       }`}
                   >
                     <div className="flex items-center gap-4">
                       <div className={`p-3 rounded-lg ${isDisabled
-                          ? "bg-gray-400 text-white" // Gray icon for disabled reminders
-                          : `bg-gradient-to-r ${getCategoryColor(reminder.Category)} text-white`
+                        ? "bg-gray-400 text-white" // Gray icon for disabled reminders
+                        : `bg-gradient-to-r ${getCategoryColor(reminder.Category)} text-white`
                         }`}>
                         <IconComponent className="h-5 w-5" />
                       </div>
@@ -648,8 +657,8 @@ export default function PaymentRemindersPage() {
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge className={`text-xs ${isDisabled
-                              ? "bg-gray-300 text-gray-600"
-                              : "bg-primary-500"
+                            ? "bg-gray-300 text-gray-600"
+                            : "bg-primary-500"
                             }`}>
                             {reminder.Category}
                           </Badge>
@@ -658,8 +667,8 @@ export default function PaymentRemindersPage() {
                             {reminder.Frequency}
                           </Badge>
                           <Badge className={`${isDisabled
-                              ? "bg-gray-200 text-gray-600 border-gray-300"
-                              : getStatusColor(reminder.Status)
+                            ? "bg-gray-200 text-gray-600 border-gray-300"
+                            : getStatusColor(reminder.Status)
                             }`}>
                             {reminder.Status}
                           </Badge>
@@ -695,8 +704,8 @@ export default function PaymentRemindersPage() {
                           variant="ghost"
                           size="icon"
                           className={`h-8 w-8 ${isDisabled
-                              ? "text-gray-400 hover:text-gray-600"
-                              : "text-gray-600 hover:text-gray-900"
+                            ? "text-gray-400 hover:text-gray-600"
+                            : "text-gray-600 hover:text-gray-900"
                             }`}
                           onClick={() => setEditingReminder(reminder)}
                           disabled={isDeleting}
@@ -707,8 +716,8 @@ export default function PaymentRemindersPage() {
                           variant="ghost"
                           size="icon"
                           className={`h-8 w-8 ${isDisabled
-                              ? "text-gray-400 hover:text-red-500"
-                              : "text-red-500 hover:text-red-700"
+                            ? "text-gray-400 hover:text-red-500"
+                            : "text-red-500 hover:text-red-700"
                             }`}
                           onClick={() => handleDelete(reminder.Reminder_ID)}
                           disabled={isDeleting}

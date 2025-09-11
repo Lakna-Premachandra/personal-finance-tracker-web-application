@@ -36,6 +36,7 @@ import {
   Calendar as CalendarViewIcon,
   Edit2,
   List,
+  PiggyBank,
   Plus,
   Target,
   Trash2
@@ -411,6 +412,19 @@ export default function YoungAdultTransactionsPage() {
       console.error("Error creating transaction:", error)
       toast.error(error?.data?.message || "Failed to add transaction")
     }
+  }
+
+  if (isTransactionsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+            <PiggyBank className="h-10 w-10 text-gray-500" />
+          </div>
+          <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
+        </div>
+      </div>
+    )
   }
 
   return (

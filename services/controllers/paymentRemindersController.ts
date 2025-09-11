@@ -157,7 +157,7 @@ export const paymentRemindersApi = api.injectEndpoints({
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: ['PaymentReminder','UserNotifications','Notifications',"CronCheck"],
+      invalidatesTags: ['PaymentReminder','UserNotifications','Notifications',"CronCheck",'Dashboard'],
     }),
 
     // Get all payment reminders

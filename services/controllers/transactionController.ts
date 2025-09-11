@@ -124,7 +124,7 @@ export const transactionApi = api.injectEndpoints({
                 method: 'POST',
                 body: transaction,
             }),
-            invalidatesTags: ['Transaction'],
+            invalidatesTags: ['Transaction','Dashboard'],
         }),
 
         // PUT - Update transaction
