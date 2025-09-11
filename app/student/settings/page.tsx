@@ -441,7 +441,7 @@ export default function SettingsPage() {
             </div>
 
             <Button
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              className="bg-gradient-to-r bg-blue-500"
               onClick={handleSaveChanges}
               disabled={updateLoading}
             >
