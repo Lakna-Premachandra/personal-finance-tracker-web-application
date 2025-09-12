@@ -250,10 +250,12 @@ export default function GoalsPage() {
 
   // Handle contribution
   const handleContribute = async (goalId: number) => {
+
     if (!contributionAmount || parseFloat(contributionAmount) <= 0) {
       toast("Please enter a valid contribution amount")
       return
     }
+
 
     // Find the goal to check target amount
     const currentGoal = goals.find(goal => goal.Goal_ID === goalId)
@@ -264,7 +266,10 @@ export default function GoalsPage() {
 
     const contributionValue = parseFloat(contributionAmount)
     const newTotalAmount = currentGoal.Current_Amount + contributionValue
-
+    if (contributionValue > netBalance) {
+      toast(`Contribution amount exceeds available balance! You can only add ${getCurrencySymbol()} ${netBalance.toFixed(2)} more to your goal.`)
+      return
+    }
     // Check if contribution would exceed target amount
     if (newTotalAmount > currentGoal.Target_Amount) {
       const remainingAmount = currentGoal.Target_Amount - currentGoal.Current_Amount
@@ -285,8 +290,37 @@ export default function GoalsPage() {
         refetchTransactions()
         refetchGoals()
       }
-    } catch (error) {
-      toast("Failed to add contribution. Please try again.")
+      else {
+        // Handle unsuccessful response but no error thrown
+        const errorMessage = result.data?.message || "Failed to add contribution"
+        toast(errorMessage)
+      }
+    } catch (error: any) {
+      // Handle different types of errors
+      let errorMessage = "Failed to add contribution. Please try again."
+
+      // Check if it's an RTK Query error with data
+      if (error?.data) {
+        // Handle 400 Bad Request - show alert for any 400 response
+        if (error.status === 400) {
+          errorMessage = error.data?.error || error.data?.message || "Invalid contribution amount or insufficient balance"
+          // Show alert for 400 responses
+          alert(errorMessage)
+          return
+        } else if (error.data?.message || error.data?.error) {
+          errorMessage = error.data.message || error.data.error
+        }
+      }
+      // Check if it's a network error or other error format
+      else if (error?.message) {
+        errorMessage = error.message
+      }
+      // Handle RTK Query error format
+      else if (error?.error) {
+        errorMessage = error.error
+      }
+
+      toast(errorMessage)
     }
   }
 
@@ -889,14 +923,6 @@ export default function GoalsPage() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditGoal(goal)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

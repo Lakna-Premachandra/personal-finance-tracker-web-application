@@ -125,7 +125,7 @@ export const jarApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Jar', 'JarStats', 'JarHistory'],
+      invalidatesTags: ['Jar', 'JarStats', 'JarHistory','Goal'],
     }),
 
     markJarSpent: builder.mutation<

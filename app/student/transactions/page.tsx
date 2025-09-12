@@ -275,19 +275,19 @@ export default function TransactionsPage() {
       })
     }
   }
- 
-    if (isTransactionsLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[500px]">
-          <div className="relative">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
-              <PiggyBank className="h-10 w-10 text-gray-500" />
-            </div>
-            <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
+
+  if (isTransactionsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+            <PiggyBank className="h-10 w-10 text-gray-500" />
           </div>
+          <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
         </div>
-      )
-    }
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -417,6 +417,8 @@ export default function TransactionsPage() {
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
+                        disabled={(date) => date > new Date()
+                        }
                         mode="single"
                         selected={date}
                         onSelect={(selectedDate) => {
@@ -532,6 +534,7 @@ export default function TransactionsPage() {
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
+                    disabled={(date) => date > new Date()}
                     mode="single"
                     selected={date}
                     onSelect={(selectedDate) => {

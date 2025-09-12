@@ -141,6 +141,10 @@ export default function PaymentRemindersPage() {
   const [updateReminder, { isLoading: isUpdating }] = useUpdatePaymentReminderMutation();
   const [deleteReminder, { isLoading: isDeleting }] = useDeletePaymentReminderMutation();
   const [markPaid] = useMarkPaymentPaidMutation();
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    reminder: PaymentReminder | null;
+  }>({ isOpen: false, reminder: null });
 
   // Local state
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -164,7 +168,9 @@ export default function PaymentRemindersPage() {
     overdueReminders: 0,
     totalAmount: 0
   };
-
+  const openDeleteConfirmation = (reminder: PaymentReminder) => {
+    setDeleteConfirmation({ isOpen: true, reminder });
+  };
   const isLoading = isLoadingReminders || isLoadingStats;
   const error = remindersError || statsError;
 
@@ -281,14 +287,17 @@ export default function PaymentRemindersPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async () => {
+    if (!deleteConfirmation.reminder) return;
+
     try {
-      const result = await deleteReminder(id).unwrap();
+      const result = await deleteReminder(deleteConfirmation.reminder.Reminder_ID).unwrap();
 
       if (result.success) {
         toast.success(result.message || "Payment reminder deleted successfully!");
         refetchReminders();
         refetchStats();
+        setDeleteConfirmation({ isOpen: false, reminder: null });
       }
     } catch (error: any) {
       console.error('Error deleting reminder:', error);
@@ -440,7 +449,7 @@ export default function PaymentRemindersPage() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                    <Calendar disabled={{ before: new Date() }} mode="single" selected={date} onSelect={setDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -695,7 +704,7 @@ export default function PaymentRemindersPage() {
                           variant="ghost"
                           size="icon"
                           className={`h-8 w-8 ${isDisabled ? "text-gray-400 hover:text-red-500" : "text-red-500 hover:text-red-700"}`}
-                          onClick={() => handleDelete(reminder.Reminder_ID)}
+                          onClick={() => openDeleteConfirmation(reminder)}
                           disabled={isDeleting}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -709,6 +718,61 @@ export default function PaymentRemindersPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={(open) => setDeleteConfirmation({ isOpen: open, reminder: null })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Delete Payment Reminder
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this payment reminder? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteConfirmation.reminder && (
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg bg-gradient-to-r ${getCategoryColor(deleteConfirmation.reminder.Category)} text-white`}>
+                  {(() => {
+                    const IconComponent = getCategoryIcon(deleteConfirmation.reminder.Category);
+                    return <IconComponent className="h-4 w-4" />;
+                  })()}
+                </div>
+                <div>
+                  <p className="font-semibold">{deleteConfirmation.reminder.Title}</p>
+                  <p className="text-sm text-gray-600">
+                    {getCurrencySymbol()}{deleteConfirmation.reminder.Amount} • {deleteConfirmation.reminder.Category}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmation({ isOpen: false, reminder: null })}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete Reminder"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

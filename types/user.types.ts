@@ -31,15 +31,16 @@ export interface YoungAdultDetails {
 
 export interface RegisterRequest {
   username: string;
-  password: string;
   email: string;
-  dateOfBirth?: string;
-  address?: string;
-  age?: number;
-  phoneNo?: string;
-  type: 'Young-Adult' | 'Student' ;
-  guardianContactNo?: string;
-  employmentStatus?: string;
+  password: string;
+  confirmPassword: string;
+  dateOfBirth: string;
+  age: number;
+  type: "Student" | "Young-Adult";
+  phoneNo?: string | null; 
+  address?: string | null;  
+  guardianContactNo?: string | null; 
+  employmentStatus?: string | null;  
 }
 
 export interface LoginRequest {
