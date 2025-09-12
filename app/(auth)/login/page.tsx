@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "sonner"
 
 import type React from "react"
 
@@ -28,7 +29,7 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
-  
+
   const [loginUser, { isLoading }] = useLoginUserMutation()
   const router = useRouter()
 
@@ -69,21 +70,24 @@ export default function LoginPage() {
         email: formData.email,
         password: formData.password,
       }).unwrap()
-       dispatch(loginSuccess({
+      dispatch(loginSuccess({
         token: result.token!,
         user: result.user
       }))
 
       // Handle successful login
       console.log("Login successful:", result)
-      
+      toast.success("Login Successful!", {
+        description: "Welcome back! Redirecting to your dashboard...",
+      })
+
       // Store user data/token if needed
       // localStorage.setItem('token', result.token) // if your API returns a token
       // localStorage.setItem('user', JSON.stringify(result.user)) // if your API returns user data
-      
+
       // Redirect based on user type
       const userType = result.user?.type || result.user.type || result.success // Handle different possible response structures
-      
+
       if (userType === 'Student') {
         router.push("/student/dashboard")
       } else if (userType === 'Young-Adult') {
@@ -93,20 +97,27 @@ export default function LoginPage() {
         console.warn("Unknown user type:", userType)
         router.push("/dashboard")
       }
-      
+
     } catch (error: any) {
+      // Show error toast instead of setting general error
+      let errorMessage = "An error occurred. Please try again later."
+
+
       console.error("Login error:", error)
-      
+
+
+
       // Handle different types of errors
       if (error?.status === 401) {
-        setErrors({ general: "Invalid email or password. Please try again." })
+        errorMessage = "Invalid email or password. Please try again."
       } else if (error?.status === 400) {
-        setErrors({ general: "Please check your email and password." })
+        errorMessage = "Please check your email and password."
       } else if (error?.data?.message) {
-        setErrors({ general: error.data.message })
-      } else {
-        setErrors({ general: "An error occurred. Please try again later." })
+        errorMessage = error.data.message
       }
+      toast.error("Login Failed", {
+        description: errorMessage,
+      })
     }
   }
 
@@ -122,20 +133,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 w-full">
       <Card className="w-full max-w-md shadow-xl border-0 bg-white/90 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
-           <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary shadow-lg">
-                <PiggyBank className="h-5 w-5 text-white" />
-              </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary shadow-lg">
+            <PiggyBank className="h-5 w-5 text-white" />
+          </div>
           <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
           <CardDescription className="text-lg">Sign in to your FinanceTracker account</CardDescription>
         </CardHeader>
 
         <CardContent className="px-8 pb-8">
-          {errors.general && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <span>{errors.general}</span>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -148,9 +153,8 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder="Enter your email"
-                  className={`pl-10 h-11 border-secondary-200 focus:border-primary focus:ring-primary ${
-                    errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
-                  }`}
+                  className={`pl-10 h-11 border-secondary-200 focus:border-primary focus:ring-primary ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+                    }`}
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   disabled={isLoading}
@@ -176,9 +180,8 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  className={`pl-10 pr-10 h-11 border-secondary-200 focus:border-primary focus:ring-primary ${
-                    errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
-                  }`}
+                  className={`pl-10 pr-10 h-11 border-secondary-200 focus:border-primary focus:ring-primary ${errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+                    }`}
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   disabled={isLoading}

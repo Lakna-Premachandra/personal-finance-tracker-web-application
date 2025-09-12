@@ -667,7 +667,9 @@ export default function YoungAdultTransactionsPage() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                      <Calendar
+                        disabled={(date) => date > new Date()}
+                        mode="single" selected={date} onSelect={setDate} initialFocus />
                     </PopoverContent>
                   </Popover>
                   {showValidation && !date && (
@@ -832,7 +834,9 @@ export default function YoungAdultTransactionsPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                  <Calendar
+                    disabled={(date) => date > new Date()}
+                    mode="single" selected={date} onSelect={setDate} initialFocus />
                 </PopoverContent>
               </Popover>
               {showValidation && !date && (

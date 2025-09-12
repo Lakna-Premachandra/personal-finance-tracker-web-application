@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Calendar,
+  Calendar as CalenderLk,
   Camera,
   Loader2,
   Mail,
@@ -30,7 +30,9 @@ import {
   RotateCw,
   ZoomIn,
   ZoomOut,
-  PiggyBank
+  PiggyBank,
+  User2,
+  CalendarIcon
 } from "lucide-react"
 import { useEffect, useState, useRef, useCallback } from "react"
 // Update this path to your actual API file
@@ -40,6 +42,10 @@ import { useDispatch } from "react-redux"
 import { toast } from "sonner"; // or whatever toast library you're using
 import { useCurrency } from "@/hooks/useCurrency"
 import { CurrencyCode } from "@/store/slices/currencySlice"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
 
 // Image Crop Component
 interface ImageCropperProps {
@@ -314,6 +320,9 @@ export default function YoungAdultSettingsPage() {
       updatedDate: "",
     }
   })
+
+  console.log(profile.data.employmentStatus, 'employmentStatus')
+
   // const [currency, setCurrency] = useState("usd")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { currency, setCurrency, allCurrencies } = useCurrency();
@@ -631,48 +640,55 @@ export default function YoungAdultSettingsPage() {
                   <Input
                     id="phone"
                     className="pl-10"
-                    value={profile.data.phoneNo}
+                    value={profile.data.phoneNo ? profile.data.phoneNo : '-'}
                     onChange={(e) => setProfile({ ...profile, data: { ...profile.data, phoneNo: e.target.value } })}
                   />
                 </div>
               </div>
               <div>
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    className="pl-10"
-                    value={profile.data.dateOfBirth ? new Date(profile.data.dateOfBirth).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setProfile({ ...profile, data: { ...profile.data, dateOfBirth: e.target.value } })}
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal pl-10",
+                        !profile.data.dateOfBirth && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className=" relative -left-7 h-4 w-4 text-secondary-400" />
+
+                      {profile.data.dateOfBirth ? (
+                        format(new Date(profile.data.dateOfBirth), "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={profile.data.dateOfBirth ? new Date(profile.data.dateOfBirth) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setProfile({
+                            ...profile,
+                            data: {
+                              ...profile.data,
+                              dateOfBirth: date.toISOString().split('T')[0]
+                            }
+                          })
+                        }
+                      }}
+                      // disabled={(date) =>
+                      //   date > new Date() || date < new Date("1900-01-01")
+                      // }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div>
-                <Label htmlFor="occupation">Occupation</Label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="occupation"
-                    className="pl-10"
-                    value={profile.data.employmentStatus}
-                    onChange={(e) => setProfile({ ...profile, data: { ...profile.data, employmentStatus: e.target.value } })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="employer">Employer</Label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="employer"
-                    className="pl-10"
-                    value={profile.data.employmentStatus}
-                    onChange={(e) => setProfile({ ...profile, data: { ...profile.data, employmentStatus: e.target.value } })}
-                  />
-                </div>
-              </div>
+
             </div>
 
             <div>
@@ -682,7 +698,7 @@ export default function YoungAdultSettingsPage() {
                 <Input
                   id="address"
                   className="pl-10"
-                  value={profile.data.address}
+                  value={profile.data.address ? profile.data.address : '-'}
                   onChange={(e) => setProfile({ ...profile, data: { ...profile.data, address: e.target.value } })}
                 />
               </div>
@@ -692,8 +708,16 @@ export default function YoungAdultSettingsPage() {
             <div>
               <Label htmlFor="employment">Employment Status</Label>
               <Select
-                value={profile.data.employmentStatus}
-                onValueChange={(value) => setProfile({ ...profile, data: { ...profile.data, employmentStatus: value } })}
+                value={profile.data.employmentStatus?.toLowerCase() || ""}   // ✅ normalize to lowercase
+                onValueChange={(value) =>
+                  setProfile(prev => ({
+                    ...prev,
+                    data: {
+                      ...prev.data,
+                      employmentStatus: value  // ✅ store lowercase value
+                    }
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select employment status" />
@@ -708,6 +732,8 @@ export default function YoungAdultSettingsPage() {
               </Select>
             </div>
 
+
+
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-green-100 text-green-700">
                 {userType} Account
@@ -717,7 +743,7 @@ export default function YoungAdultSettingsPage() {
             </div>
 
             <Button
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              className="bg-blue-600 hover:bg-blue-500"
               onClick={handleSaveChanges}
               disabled={updateLoading}
             >

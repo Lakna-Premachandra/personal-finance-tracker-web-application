@@ -12,11 +12,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { format } from "date-fns"
+
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Calendar,
+  CalendarIcon,
   Camera,
   Loader2,
   Mail,
@@ -33,6 +35,9 @@ import { useDispatch, useSelector } from "react-redux"
 import { toast } from "sonner"
 import { useCurrency } from "@/hooks/useCurrency"
 import { CurrencyCode } from "@/store/slices/currencySlice"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { cn } from "@/lib/utils"
 
 // Add RootState type
 interface RootState {
@@ -368,23 +373,54 @@ export default function SettingsPage() {
                   <Input
                     id="phone"
                     className="pl-10"
-                    value={profile.data.phoneNo}
+                    value={profile.data.phoneNo ? profile.data.phoneNo : '-'}
                     onChange={(e) => setProfile({ ...profile, data: { ...profile.data, phoneNo: e.target.value } })}
                   />
                 </div>
               </div>
               <div>
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    className="pl-10"
-                    value={profile.data.dateOfBirth ? new Date(profile.data.dateOfBirth).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setProfile({ ...profile, data: { ...profile.data, dateOfBirth: e.target.value } })}
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal pl-10",
+                        !profile.data.dateOfBirth && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className=" relative -left-7 h-4 w-4 text-secondary-400" />
+
+                      {profile.data.dateOfBirth ? (
+                        format(new Date(profile.data.dateOfBirth), "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={profile.data.dateOfBirth ? new Date(profile.data.dateOfBirth) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setProfile({
+                            ...profile,
+                            data: {
+                              ...profile.data,
+                              dateOfBirth: date.toISOString().split('T')[0]
+                            }
+                          })
+                        }
+                      }}
+                      // disabled={(date) =>
+                      //   date > new Date() || date < new Date("1900-01-01")
+                      // }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -395,7 +431,7 @@ export default function SettingsPage() {
                 <Input
                   id="address"
                   className="pl-10"
-                  value={profile.data.address}
+                  value={profile.data.address ? profile.data.address : '-'}
                   onChange={(e) => setProfile({ ...profile, data: { ...profile.data, address: e.target.value } })}
                 />
               </div>
@@ -410,7 +446,7 @@ export default function SettingsPage() {
                   <Input
                     id="guardianContact"
                     className="pl-10"
-                    value={profile.data.guardianContactNo}
+                    value={profile.data.guardianContactNo ? profile.data.guardianContactNo : '-'}
                     onChange={(e) => setProfile({ ...profile, data: { ...profile.data, guardianContactNo: e.target.value } })}
                   />
                 </div>
@@ -446,7 +482,7 @@ export default function SettingsPage() {
             </div>
 
             <Button
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              className="bg-gradient-to-r bg-blue-600"
               onClick={handleSaveChanges}
               disabled={updateLoading}
             >

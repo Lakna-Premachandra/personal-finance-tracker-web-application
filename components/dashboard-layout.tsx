@@ -98,15 +98,15 @@ export function DashboardLayout({ children, userType, userName }: DashboardLayou
   const [triggerCheck] = useLazyTriggerManualCheckQuery()
 
   // Auto-refresh notifications every 30 seconds
-  useEffect(() => {
-    if (!user?.id) return
+  // useEffect(() => {
+  //   if (!user?.id) return
 
-    const interval = setInterval(() => {
-      refetchNotifications()
-    }, 2000) // 30 seconds
+  //   const interval = setInterval(() => {
+  //     refetchNotifications()
+  //   }, 2000) // 30 seconds
 
-    return () => clearInterval(interval)
-  }, [user?.id, refetchNotifications])
+  //   return () => clearInterval(interval)
+  // }, [user?.id, refetchNotifications])
 
   // Start cron service
   useEffect(() => {

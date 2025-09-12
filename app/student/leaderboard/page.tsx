@@ -5,8 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { Trophy, Medal, Award, TrendingUp, Target, Coins, Star, Crown, Loader2, AlertCircle, RefreshCw, Search } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Trophy, Medal, Award, TrendingUp, Target, Coins, Star, Crown, Loader2, AlertCircle, RefreshCw, Search, PiggyBank } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { useGetEligibilityQuery, useGetLeaderboardQuery, useGetPositionQuery, useGetStatsQuery, useRefreshLeaderboardMutation } from "@/services/controllers/leaderboardController"
 import { useSelector } from "react-redux"
@@ -145,21 +145,12 @@ export default function LeaderboardPage() {
 
   if (isLeaderboardLoading || isEligibilityLoading || isStatsLoading || isPositionLoading) {
     return (
-      <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
-            <p className="text-muted-foreground">All representatives • Compete</p>
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="relative">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 shadow-sm">
+            <PiggyBank className="h-10 w-10 text-gray-500" />
           </div>
-          <Button variant="outline" disabled>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading leaderboard...</span>
+          <div className="m-4 absolute inset-0 rounded-full border-4 border-transparent border-t-slate-500 border-r-slate-300 animate-spin"></div>
         </div>
       </div>
     )
@@ -206,11 +197,6 @@ export default function LeaderboardPage() {
           <p className="text-muted-foreground">All representatives • Compete</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Overall</span>
-            <Button variant="default" size="sm">This Month</Button>
-            <Button variant="outline" size="sm">All Time</Button>
-          </div>
           <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
@@ -230,11 +216,28 @@ export default function LeaderboardPage() {
 
       {/* Show eligibility status if not eligible */}
       {eligibilityData?.data && !eligibilityData.data.Is_Eligible && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {eligibilityData.data.Progress_Message}
-            You need {eligibilityData.data.Goals_Required - eligibilityData.data.Goals_Completed} more completed goals and jar level {eligibilityData.data.Jar_Level_Required} to be eligible.
+        <Alert className="border-amber-200 bg-amber-50 shadow-sm mb-3">
+          <AlertTitle className="text-amber-900 font-semibold text-base">
+            Eligibility Requirements Not Met
+          </AlertTitle>
+          <AlertDescription className="text-amber-800 mt-2 leading-relaxed">
+            <div className="space-y-2">
+              <p className="text-sm">{eligibilityData.data.Progress_Message}</p>
+              <div className="flex flex-col sm:flex-row gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                  <span className="font-medium">
+                    {eligibilityData.data.Goals_Required - eligibilityData.data.Goals_Completed} more completed goals required
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                  <span className="font-medium">
+                    Jar level {eligibilityData.data.Jar_Level_Required} needed
+                  </span>
+                </div>
+              </div>
+            </div>
           </AlertDescription>
         </Alert>
       )}

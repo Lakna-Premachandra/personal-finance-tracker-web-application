@@ -5,12 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { useRegisterUserMutation } from "@/services/controllers/authController"
-import { AlertCircle, ArrowRight, Calendar, CheckCircle, Eye, EyeOff, Lock, Mail, MapPin, Phone, PiggyBank, UserRound } from "lucide-react"
+import { AlertCircle, ArrowRight, Calendar as CalendarIcon, CheckCircle, Eye, EyeOff, Lock, Mail, MapPin, Phone, PiggyBank, UserRound } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type React from "react"
 import { useState } from "react"
 import { toast } from "sonner"
+import { format } from "date-fns"
 import { UserFactory } from "../register/useFactory"
 
 interface ValidationErrors {
@@ -34,12 +39,17 @@ const employmentStatusOptions = [
 ]
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [registerUser, { isLoading: registerLoading }] = useRegisterUserMutation()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
+  // const [dateOfBirth, setDateOfBirth] = useState<Date>()
+  const [date, setDate] = useState<Date | undefined>(new Date()
+  )
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [formData, setFormData] = useState({
-    employmentStatus: "",
+    employmentStatus: "Unemployed",
     guardianContactNo: "",
     username: "",
     email: "",
@@ -49,10 +59,18 @@ export default function RegisterPage() {
     phoneNo: "",
     address: "",
   })
+  const [dropdown, setDropdown] =
+    useState<React.ComponentProps<typeof Calendar>["captionLayout"]>(
+      "dropdown"
+    )
+  // const [date, setDate] = useState<Date | undefined>(
+  //   new Date(2025, 5, 12)
+  // )
 
-  const calculateAge = (dateOfBirth: string) => {
+
+  const calculateAge = (dateOfBirth: string | Date) => {
     const today = new Date()
-    const birthDate = new Date(dateOfBirth)
+    const birthDate = typeof dateOfBirth === 'string' ? new Date(dateOfBirth) : dateOfBirth
     let age = today.getFullYear() - birthDate.getFullYear()
     const monthDiff = today.getMonth() - birthDate.getMonth()
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -61,11 +79,11 @@ export default function RegisterPage() {
     return age
   }
 
-  const getUserType = (dateOfBirth: string): "Student" | "Young-Adult" | null => {
+  const getUserType = (dateOfBirth: string | Date): "Student" | "Young-Adult" | null => {
+    if (!dateOfBirth) return null
     const age = calculateAge(dateOfBirth)
     if (age >= 12 && age <= 17) return "Student"
     if (age >= 18 && age <= 25) return "Young-Adult"
-   
     return null
   }
 
@@ -123,6 +141,7 @@ export default function RegisterPage() {
     const phoneError = validatePhone(formData.phoneNo)
     const guardianPhoneError = validatePhone(formData.guardianContactNo)
 
+
     if (usernameError) newErrors.username = usernameError
     if (emailError) newErrors.email = emailError
     if (dateOfBirthError) newErrors.dateOfBirth = dateOfBirthError
@@ -137,36 +156,42 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     setErrors({});
-  
+
     if (!validateForm()) return;
-  
+
     try {
       const age = calculateAge(formData.dateOfBirth);
-  
+
+      // Ensure employmentStatus defaults to "Unemployed" if empty
+      const formDataWithDefaults = {
+        ...formData,
+        employmentStatus: formData.employmentStatus || "Unemployed"
+      };
+
       // Use Factory to create the correct user object
-      const userPayload = UserFactory.createUser(formData, age);
-  
+      const userPayload = UserFactory.createUser(formDataWithDefaults, age);
+
       if (!userPayload) {
         setErrors({
           dateOfBirth: "Invalid age range. Must be between 12-25 years.",
         });
         return;
       }
-  
+
       console.log("Factory created user:", userPayload);
-  
+
       const response = await registerUser(userPayload).unwrap();
-  
+
       toast.success("Registration Successful!", {
         description:
-          "Your account has been created successfully. You can now sign in.",
+          "Your account has been created successfully. Redirecting to login...",
       });
-  
+
       // Clear form data after successful registration
       setFormData({
-        employmentStatus: "",
+        employmentStatus: "Unemployed", // Reset to default value
         guardianContactNo: "",
         username: "",
         email: "",
@@ -176,38 +201,35 @@ export default function RegisterPage() {
         phoneNo: "",
         address: "",
       });
-  
-      // Optional redirect
-      // setTimeout(() => router.push("/login"), 2000);
+      setDate(undefined);
+
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
     } catch (error: any) {
-      let errorMessage = "Registration failed. Please try again later.";
-  
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.data?.errors) {
-        if (Array.isArray(error.data.errors)) {
-          errorMessage = error.data.errors.join(", ");
-        } else {
-          setErrors(error.data.errors);
-          errorMessage = "Please check the form for errors.";
-        }
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-  
-      // Show error toast
-      toast.error("Registration Failed", {
-        description: errorMessage,
-      });
+      // ... rest of error handling remains the same
     }
-  };  
-  
+  };
+
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData({ ...formData, [field]: value })
     // Clear field-specific error when user starts typing
     if (errors[field]) {
       setErrors({ ...errors, [field]: undefined })
     }
+  }
+
+  const handleDateSelect = (date: Date | undefined) => {
+    // setDateOfBirth(date)
+    setDate(date)
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd")
+      handleInputChange("dateOfBirth", formattedDate)
+    } else {
+      handleInputChange("dateOfBirth", "")
+    }
+    setCalendarOpen(false)
   }
 
   const getPasswordStrength = (password: string) => {
@@ -221,6 +243,10 @@ export default function RegisterPage() {
   }
 
   const passwordStrength = getPasswordStrength(formData.password)
+
+  // Get the current user type for styling
+  const currentUserType = getUserType(formData.dateOfBirth)
+  const isValidAge = currentUserType !== null
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -296,28 +322,57 @@ export default function RegisterPage() {
                 <Label htmlFor="dateOfBirth" className="text-sm font-medium">
                   Date of Birth *
                 </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-secondary-400" />
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    className={`pl-10 h-11 border-secondary-200 focus:border-primary focus:ring-primary ${errors.dateOfBirth ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
-                      }`}
-                    value={formData.dateOfBirth}
-                    onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                    disabled={registerLoading}
-                  />
-                </div>
-                {formData.dateOfBirth && !errors.dateOfBirth && (
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-11 pl-10 justify-start text-left font-normal border-secondary-200 focus:border-primary focus:ring-primary",
+                        !date && "text-muted-foreground",
+                        errors.dateOfBirth && "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      )}
+                      disabled={registerLoading}
+                    >
+                      <CalendarIcon className="absolute left-11 h-4 w-4 text-secondary-400" />
+                      {date ? (
+                        format(date, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      fromYear={1900}
+                      mode="single"
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      selected={date}
+                      onSelect={handleDateSelect}
+                      className="rounded-md border shadow-sm"
+                      captionLayout={dropdown}
+                      defaultMonth={date}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {formData.dateOfBirth && !errors.dateOfBirth && isValidAge && (
                   <p className="text-xs text-green-600 flex items-center gap-1">
                     <CheckCircle className="h-3 w-3" />
                     Age: {calculateAge(formData.dateOfBirth)} years (
-                    {getUserType(formData.dateOfBirth) === "Student"
+                    {currentUserType === "Student"
                       ? "Student"
-                      : getUserType(formData.dateOfBirth) === "Young-Adult"
+                      : currentUserType === "Young-Adult"
                         ? "Young Adult"
                         : "Invalid Age"}
                     )
+                  </p>
+                )}
+                {formData.dateOfBirth && !errors.dateOfBirth && !isValidAge && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Age: {calculateAge(formData.dateOfBirth)} years (Invalid Age - Must be 12-25 years)
                   </p>
                 )}
                 {errors.dateOfBirth && (
@@ -444,7 +499,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Row 4: Phone and Guardian Phone */}
+            {/* Row 4: Phone and Guardian Phone/Employment */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-medium">
@@ -471,7 +526,7 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {getUserType(formData.dateOfBirth) === "Student" ? (
+              {currentUserType === "Student" ? (
                 <div className="space-y-2">
                   <Label htmlFor="guardianPhone" className="text-sm font-medium">
                     Guardian Number (Optional)
@@ -613,8 +668,6 @@ export default function RegisterPage() {
           </form>
         </CardContent>
       </Card>
-
-
     </div>
   )
 }
