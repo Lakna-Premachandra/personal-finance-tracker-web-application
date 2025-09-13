@@ -82,7 +82,10 @@ export default function SettingsPage() {
   })
   const { currency, setCurrency, allCurrencies } = useCurrency();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-
+  const [dropdown, setDropdown] =
+    useState<React.ComponentProps<typeof Calendar>["captionLayout"]>(
+      "dropdown"
+    )
   // Get user ID from session storage or token
   useEffect(() => {
     if (user?.id) {
@@ -396,11 +399,13 @@ export default function SettingsPage() {
                       ) : (
                         <span>Pick a date</span>
                       )}
-                    
+
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
+                      captionLayout={dropdown}
+                      defaultMonth={profile.data.dateOfBirth ? new Date(profile.data.dateOfBirth) : undefined}
                       mode="single"
                       selected={profile.data.dateOfBirth ? new Date(profile.data.dateOfBirth) : undefined}
                       onSelect={(date) => {
